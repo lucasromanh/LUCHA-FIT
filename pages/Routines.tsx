@@ -92,26 +92,143 @@ const Routines: React.FC = () => {
       }
   };
 
-  // --- MOCK EXPORT LOGIC ---
+  // --- REAL EXPORT LOGIC ---
+  
+  // Helper: Generate CSV Content
+  const generateCSV = (routine: Routine, clientName: string) => {
+      let csvContent = `\uFEFFPlan de Entrenamiento,${routine.title}\n`;
+      csvContent += `Paciente,${clientName}\n`;
+      csvContent += `Profesional,${PROFESSIONAL_PROFILE.display}\n`;
+      csvContent += `Objetivo,${routine.objective}\n`;
+      csvContent += `Frecuencia,${routine.frequency}\n`;
+      csvContent += `Nivel,${routine.level}\n\n`;
+
+      routine.sessions.forEach(session => {
+          csvContent += `--- ${session.label} ---\n`;
+          csvContent += `Bloque,Ejercicio,Series,Reps,Carga,Descanso,Notas\n`;
+          
+          session.exercises.forEach(ex => {
+              // Handle commas in text fields by wrapping in quotes
+              const safeName = `"${ex.name.replace(/"/g, '""')}"`;
+              const safeNotes = `"${(ex.notes || '').replace(/"/g, '""')}"`;
+              csvContent += `${ex.block.toUpperCase()},${safeName},${ex.sets},${ex.reps},${ex.load},${ex.rest},${safeNotes}\n`;
+          });
+          csvContent += `\n`;
+      });
+
+      return csvContent;
+  };
+
+  // Helper: Open Print Window for PDF
+  const openPrintWindow = (routine: Routine, clientName: string) => {
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
+      if (!printWindow) {
+          alert("Por favor habilita las ventanas emergentes para generar el PDF.");
+          return;
+      }
+
+      const htmlContent = `
+        <html>
+        <head>
+            <title>Rutina - ${clientName}</title>
+            <style>
+                body { font-family: 'Arial', sans-serif; line-height: 1.5; color: #333; padding: 20px; }
+                .header { border-bottom: 2px solid #13ec5b; padding-bottom: 20px; margin-bottom: 30px; }
+                .header h1 { margin: 0; color: #0d1b12; }
+                .header p { margin: 5px 0; color: #666; }
+                .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 30px; background: #f9f9f9; padding: 15px; border-radius: 8px; }
+                .session { margin-bottom: 40px; page-break-inside: avoid; }
+                .session-title { background: #0d1b12; color: white; padding: 8px 15px; border-radius: 4px; margin-bottom: 15px; font-size: 18px; font-weight: bold; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                th { text-align: left; border-bottom: 2px solid #ddd; padding: 8px; background: #f0f0f0; }
+                td { border-bottom: 1px solid #eee; padding: 8px; }
+                .block-warmup { color: #d97706; font-weight: bold; }
+                .block-main { color: #13ec5b; font-weight: bold; }
+                .block-accessory { color: #3b82f6; font-weight: bold; }
+                .block-cooldown { color: #6b7280; font-weight: bold; }
+                .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>${PROFESSIONAL_PROFILE.name}</h1>
+                <p>ISAK Nivel ${PROFESSIONAL_PROFILE.isak_level} | Entrenador Personal</p>
+            </div>
+            
+            <div class="meta-grid">
+                <div><strong>Paciente:</strong> ${clientName}</div>
+                <div><strong>Rutina:</strong> ${routine.title}</div>
+                <div><strong>Objetivo:</strong> ${routine.objective}</div>
+                <div><strong>Frecuencia:</strong> ${routine.frequency}</div>
+                <div><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</div>
+                <div><strong>Nivel:</strong> ${routine.level}</div>
+            </div>
+
+            ${routine.sessions.map(session => `
+                <div class="session">
+                    <div class="session-title">${session.label}</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="10%">Bloque</th>
+                                <th width="30%">Ejercicio</th>
+                                <th width="10%">Series</th>
+                                <th width="10%">Reps</th>
+                                <th width="15%">Carga</th>
+                                <th width="10%">Pausa</th>
+                                <th width="15%">Notas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${session.exercises.map(ex => `
+                                <tr>
+                                    <td class="block-${ex.block}">${ex.block === 'warmup' ? 'Calent.' : ex.block === 'main' ? 'Principal' : ex.block === 'accessory' ? 'Acc.' : 'Final'}</td>
+                                    <td><strong>${ex.name}</strong></td>
+                                    <td>${ex.sets}</td>
+                                    <td>${ex.reps}</td>
+                                    <td>${ex.load}</td>
+                                    <td>${ex.rest}</td>
+                                    <td>${ex.notes || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `).join('')}
+
+            <div class="footer">
+                Generado por LUCHA-FIT Professional Dashboard
+            </div>
+            <script>
+                window.onload = function() { window.print(); }
+            </script>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+  };
+
   const downloadMockFile = (routine: Routine, type: 'pdf' | 'xlsx') => {
       if (!selectedClient) return;
       
-      const fileName = `Rutina_${selectedClient.name.split(' ')[1]}_${selectedClient.name.split(' ')[0]}_${new Date().toLocaleDateString('es-ES').replace(/\//g, '-')}.${type}`;
-      
-      console.group(`Exporting ${type.toUpperCase()}`);
-      console.log('File Name:', fileName);
-      console.log('Professional:', PROFESSIONAL_PROFILE.display);
-      console.log('Client:', selectedClient.name);
-      console.log('Data:', routine);
-      console.groupEnd();
+      const fileName = `Rutina_${selectedClient.name.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}`;
 
       if (type === 'pdf') {
-          // In a real app: import jsPDF from 'jspdf';
-          alert(`Simulando descarga de PDF:\n\nArchivo: ${fileName}\n\nEn un entorno de producción, esto generaría un PDF con encabezado profesional y tablas de ejercicios.`);
-          window.print(); // Simple fallback for demo
+          // Open formatted print window
+          openPrintWindow(routine, selectedClient.name);
       } else {
-          // In a real app: import * as XLSX from 'xlsx';
-          alert(`Simulando descarga de Excel:\n\nArchivo: ${fileName}\n\nEn un entorno de producción, esto generaría un .xlsx con hojas por sesión.`);
+          // Generate Real CSV File
+          const csvString = generateCSV(routine, selectedClient.name);
+          const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement("a");
+          const url = URL.createObjectURL(blob);
+          link.setAttribute("href", url);
+          link.setAttribute("download", `${fileName}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
       }
   };
 
@@ -315,8 +432,8 @@ const Routines: React.FC = () => {
                                   </div>
                               </div>
                               <div className="flex items-center gap-2 self-end md:self-center">
-                                  <button onClick={() => downloadMockFile(routine, 'pdf')} className="p-2 text-gray-500 hover:text-red-600 transition-colors" title="Descargar PDF"><span className="material-symbols-outlined">picture_as_pdf</span></button>
-                                  <button onClick={() => downloadMockFile(routine, 'xlsx')} className="p-2 text-gray-500 hover:text-green-600 transition-colors" title="Descargar Excel"><span className="material-symbols-outlined">table_view</span></button>
+                                  <button onClick={() => downloadMockFile(routine, 'pdf')} className="p-2 text-gray-500 hover:text-red-600 transition-colors" title="Descargar PDF (Imprimir)"><span className="material-symbols-outlined">picture_as_pdf</span></button>
+                                  <button onClick={() => downloadMockFile(routine, 'xlsx')} className="p-2 text-gray-500 hover:text-green-600 transition-colors" title="Descargar CSV/Excel"><span className="material-symbols-outlined">table_view</span></button>
                                   <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
                                   <button onClick={() => handleDuplicateRoutine(routine)} className="p-2 text-gray-500 hover:text-primary transition-colors" title="Duplicar"><span className="material-symbols-outlined">content_copy</span></button>
                                   <button onClick={() => handleEditRoutine(routine)} className="p-2 text-gray-500 hover:text-blue-500 transition-colors" title="Editar"><span className="material-symbols-outlined">edit</span></button>

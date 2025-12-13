@@ -135,27 +135,150 @@ export const MOCK_HISTORY: Record<string, MeasurementRecord[]> = {
   ]
 };
 
-// MOCK ROUTINES DATA
+// MOCK ROUTINES DATA (UPDATED WITH 5 EXAMPLES)
 export const MOCK_ROUTINES: Record<string, Routine[]> = {
+  // JUAN PÉREZ - Hipertrofia
   'C-1024': [
     {
-      id: 'r-1',
+      id: 'r-1024-1',
       patientId: 'C-1024',
-      title: 'Hipertrofia Fase 1',
-      objective: 'Ganancia muscular',
+      title: 'Hipertrofia - Fase de Acumulación',
+      objective: 'Ganancia de masa muscular',
       sport: 'Musculación',
       level: 'Intermedio',
-      frequency: '4 días',
+      frequency: '4 días/semana',
       status: 'active',
       createdAt: '2023-10-01',
       sessions: [
         {
-          id: 's-1',
-          routineId: 'r-1',
-          label: 'Día 1: Torso',
+          id: 's-1024-1-1',
+          routineId: 'r-1024-1',
+          label: 'Día 1: Torso (Empuje/Tracción)',
           exercises: [
-            { id: 'e-1', block: 'main', name: 'Press Banca', sets: 4, reps: '8-10', load: 'RPE 8', rest: '2 min', notes: '' },
-            { id: 'e-2', block: 'main', name: 'Remo con Barra', sets: 4, reps: '8-10', load: 'RPE 8', rest: '2 min', notes: '' }
+            { id: 'e-1', block: 'warmup', name: 'Movilidad de Hombros', sets: 1, reps: '3 min', load: 'Banda elástica', rest: '0', notes: 'Enfasis en rotadores' },
+            { id: 'e-2', block: 'main', name: 'Press Banca Plano', sets: 4, reps: '6-8', load: 'RPE 8', rest: '3 min', notes: 'Controlar bajada' },
+            { id: 'e-3', block: 'main', name: 'Remo con Barra', sets: 4, reps: '8-10', load: 'RPE 8', rest: '2 min', notes: 'Torso a 45 grados' },
+            { id: 'e-4', block: 'accessory', name: 'Press Militar Mancuernas', sets: 3, reps: '10-12', load: 'RPE 7-8', rest: '90s', notes: '' },
+            { id: 'e-5', block: 'accessory', name: 'Elevaciones Laterales', sets: 3, reps: '15', load: 'RPE 9', rest: '60s', notes: 'Drop set última serie' }
+          ]
+        },
+        {
+          id: 's-1024-1-2',
+          routineId: 'r-1024-1',
+          label: 'Día 2: Pierna Enfasis Cuádriceps',
+          exercises: [
+            { id: 'e-6', block: 'warmup', name: 'Sentadilla Copa', sets: 2, reps: '15', load: '10kg', rest: '60s', notes: 'Activación' },
+            { id: 'e-7', block: 'main', name: 'Sentadilla Barra Alta', sets: 4, reps: '6-8', load: 'RPE 8', rest: '3 min', notes: 'Profunda' },
+            { id: 'e-8', block: 'main', name: 'Prensa 45', sets: 3, reps: '12-15', load: 'RPE 9', rest: '2 min', notes: 'Pies cerrados' },
+            { id: 'e-9', block: 'accessory', name: 'Sillón Cuádriceps', sets: 3, reps: '15-20', load: 'Fallo', rest: '60s', notes: '3 seg isometría arriba' }
+          ]
+        }
+      ]
+    }
+  ],
+  // MARÍA GONZÁLEZ - Pérdida de Grasa
+  'C-1025': [
+    {
+      id: 'r-1025-1',
+      patientId: 'C-1025',
+      title: 'Metabólico Full Body',
+      objective: 'Pérdida de grasa y tonificación',
+      sport: 'Fitness',
+      level: 'Intermedio',
+      frequency: '3 días/semana',
+      status: 'active',
+      createdAt: '2023-10-05',
+      sessions: [
+        {
+          id: 's-1025-1-1',
+          routineId: 'r-1025-1',
+          label: 'Día 1: Circuito A',
+          exercises: [
+            { id: 'e-1', block: 'warmup', name: 'Cinta Caminata', sets: 1, reps: '5 min', load: 'Nivel 4', rest: '0', notes: 'Inclinación 5%' },
+            { id: 'e-2', block: 'main', name: 'Goblet Squat', sets: 4, reps: '15', load: '12kg', rest: '0', notes: 'Circuito continuo' },
+            { id: 'e-3', block: 'main', name: 'Flexiones (Push ups)', sets: 4, reps: '10-12', load: 'Peso corporal', rest: '0', notes: 'Rodillas si es necesario' },
+            { id: 'e-4', block: 'main', name: 'Remo TRX', sets: 4, reps: '15', load: 'Peso corporal', rest: '90s', notes: 'Descansar al final de la vuelta' },
+            { id: 'e-5', block: 'cooldown', name: 'Plancha Abdominal', sets: 3, reps: '30s', load: '-', rest: '30s', notes: '' }
+          ]
+        }
+      ]
+    }
+  ],
+  // CARLOS RUIZ - Mantenimiento +50
+  'C-0998': [
+    {
+      id: 'r-0998-1',
+      patientId: 'C-0998',
+      title: 'Fuerza General y Movilidad',
+      objective: 'Mantenimiento y Salud Articular',
+      sport: 'Salud',
+      level: 'Principiante',
+      frequency: '2 días/semana',
+      status: 'active',
+      createdAt: '2023-09-28',
+      sessions: [
+        {
+          id: 's-0998-1-1',
+          routineId: 'r-0998-1',
+          label: 'Sesión Única',
+          exercises: [
+            { id: 'e-1', block: 'warmup', name: 'Cat-Cow', sets: 2, reps: '10', load: '-', rest: '0', notes: 'Movilidad columna' },
+            { id: 'e-2', block: 'main', name: 'Peso Muerto Rumano', sets: 3, reps: '10', load: 'Mancuernas', rest: '90s', notes: 'Cuidar espalda neutra' },
+            { id: 'e-3', block: 'main', name: 'Press Pecho Máquina', sets: 3, reps: '12', load: 'Bloques 4', rest: '90s', notes: '' },
+            { id: 'e-4', block: 'main', name: 'Jalón al pecho', sets: 3, reps: '12', load: 'Bloques 5', rest: '90s', notes: '' },
+            { id: 'e-5', block: 'accessory', name: 'Caminata Granja', sets: 3, reps: '30m', load: '10kg c/u', rest: '60s', notes: 'Postura erguida' }
+          ]
+        }
+      ]
+    }
+  ],
+  // ANA LÓPEZ - Rendimiento Deportivo
+  'C-1030': [
+    {
+      id: 'r-1030-1',
+      patientId: 'C-1030',
+      title: 'Potencia y Velocidad',
+      objective: 'Mejorar salto vertical',
+      sport: 'Vóley',
+      level: 'Avanzado',
+      frequency: '4 días/semana',
+      status: 'draft',
+      createdAt: '2023-10-15',
+      sessions: [
+        {
+          id: 's-1030-1-1',
+          routineId: 'r-1030-1',
+          label: 'Día 1: Potencia',
+          exercises: [
+            { id: 'e-1', block: 'warmup', name: 'Saltos a cajón', sets: 3, reps: '5', load: '-', rest: '60s', notes: 'Altura media' },
+            { id: 'e-2', block: 'main', name: 'Power Clean', sets: 5, reps: '3', load: '75%', rest: '3 min', notes: 'Velocidad máxima' },
+            { id: 'e-3', block: 'main', name: 'Sentadilla Explosiva', sets: 4, reps: '5', load: '60%', rest: '2 min', notes: 'Subida rápida' }
+          ]
+        }
+      ]
+    }
+  ],
+  // PEDRO SÁNCHEZ - Readaptación
+  'C-0850': [
+    {
+      id: 'r-0850-1',
+      patientId: 'C-0850',
+      title: 'Readaptación Lumbar',
+      objective: 'Fortalecimiento Core',
+      sport: 'Rehabilitación',
+      level: 'Principiante',
+      frequency: '3 días/semana',
+      status: 'active',
+      createdAt: '2023-08-20',
+      sessions: [
+        {
+          id: 's-0850-1-1',
+          routineId: 'r-0850-1',
+          label: 'Día A: Estabilidad',
+          exercises: [
+            { id: 'e-1', block: 'main', name: 'Bird-Dog', sets: 3, reps: '10/lado', load: '-', rest: '60s', notes: 'Lento y controlado' },
+            { id: 'e-2', block: 'main', name: 'Plancha lateral', sets: 3, reps: '20s', load: '-', rest: '45s', notes: 'Alinear cadera' },
+            { id: 'e-3', block: 'main', name: 'Puente de Glúteo', sets: 3, reps: '15', load: '-', rest: '60s', notes: 'Apretando arriba 2 seg' }
           ]
         }
       ]
