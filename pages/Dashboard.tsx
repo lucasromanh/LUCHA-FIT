@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Appointment } from '../types';
-import { CLIENTS } from '../constants';
+import { CLIENTS, PROFESSIONAL_PROFILE } from '../constants';
 
 interface DashboardProps {
     onNavigate: (page: string) => void;
@@ -172,7 +172,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Page Heading */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black text-text-dark dark:text-white tracking-tight mb-2">Hola, Dr. Lucha 👋</h1>
+          <h1 className="text-3xl md:text-4xl font-black text-text-dark dark:text-white tracking-tight mb-2">Hola, {PROFESSIONAL_PROFILE.name.split(' ')[0]} 👋</h1>
           <p className="text-text-muted dark:text-gray-400 text-base">Resumen de tu actividad y próximos turnos para hoy.</p>
         </div>
         <div className="flex items-center gap-2 bg-white dark:bg-surface-dark px-4 py-2 rounded-lg border border-input-border dark:border-gray-700 shadow-sm">

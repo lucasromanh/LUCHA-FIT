@@ -1,4 +1,10 @@
-import { Client, Appointment, MeasurementRecord } from './types';
+import { Client, Appointment, MeasurementRecord, Routine } from './types';
+
+export const PROFESSIONAL_PROFILE = {
+  name: "Luciana Milagros Burgos",
+  isak_level: 1,
+  get display() { return `${this.name} — ISAK nivel ${this.isak_level}`; }
+};
 
 export const CLIENTS: Client[] = [
   {
@@ -125,6 +131,34 @@ export const MOCK_HISTORY: Record<string, MeasurementRecord[]> = {
         girths: { arm_relaxed: 31, arm_flexed: 34, waist: 88, hips: 101, mid_thigh: 58, calf_girth: 39 },
         breadths: { humerus: 7.2, bistyloid: 5.4, femur: 9.8 }
       }
+    }
+  ]
+};
+
+// MOCK ROUTINES DATA
+export const MOCK_ROUTINES: Record<string, Routine[]> = {
+  'C-1024': [
+    {
+      id: 'r-1',
+      patientId: 'C-1024',
+      title: 'Hipertrofia Fase 1',
+      objective: 'Ganancia muscular',
+      sport: 'Musculación',
+      level: 'Intermedio',
+      frequency: '4 días',
+      status: 'active',
+      createdAt: '2023-10-01',
+      sessions: [
+        {
+          id: 's-1',
+          routineId: 'r-1',
+          label: 'Día 1: Torso',
+          exercises: [
+            { id: 'e-1', block: 'main', name: 'Press Banca', sets: 4, reps: '8-10', load: 'RPE 8', rest: '2 min', notes: '' },
+            { id: 'e-2', block: 'main', name: 'Remo con Barra', sets: 4, reps: '8-10', load: 'RPE 8', rest: '2 min', notes: '' }
+          ]
+        }
+      ]
     }
   ]
 };

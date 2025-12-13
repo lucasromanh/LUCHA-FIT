@@ -66,3 +66,41 @@ export interface MeasurementRecord {
   evaluator: string;
   data: AnthropometricData;
 }
+
+// --- ROUTINE TYPES ---
+
+export type ExerciseBlock = 'warmup' | 'main' | 'accessory' | 'cooldown';
+
+export interface RoutineExercise {
+  id: string;
+  block: ExerciseBlock;
+  name: string;
+  sets: number;
+  reps: string;
+  load: string;
+  rest: string;
+  notes?: string;
+}
+
+export interface RoutineSession {
+  id: string;
+  routineId: string;
+  label: string; // e.g., "Lunes", "Día 1"
+  exercises: RoutineExercise[];
+}
+
+export interface Routine {
+  id: string;
+  patientId: string;
+  title: string;
+  objective: string;
+  sport: string;
+  level: string;
+  frequency: string;
+  startDate?: string;
+  endDate?: string;
+  notes?: string;
+  status: 'draft' | 'active' | 'archived';
+  createdAt: string;
+  sessions: RoutineSession[];
+}

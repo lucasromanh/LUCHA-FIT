@@ -1,4 +1,5 @@
 import React from 'react';
+import { PROFESSIONAL_PROFILE } from '../constants';
 
 interface SidebarProps {
   currentPage: string;
@@ -12,6 +13,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, onLogout }) 
     { id: 'clients', label: 'Pacientes', icon: 'group' },
     { id: 'calendar', label: 'Calendario', icon: 'calendar_month' },
     { id: 'reports', label: 'Mediciones', icon: 'show_chart' },
+    { id: 'routines', label: 'Rutinas', icon: 'fitness_center' }, // New Item
     { id: 'settings', label: 'Configuración', icon: 'settings' },
   ];
 
@@ -60,8 +62,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, onLogout }) 
             style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBrpTaA0VBngwNQfOM6EJfqUTLYoReFLlORoBE46fF1VwBhMU2lSIG8ZykB2FpZHUXqeTOi3jF0XHsbMPxc3-bXQaf2mAjoPXOPr98thAhzyxHAKqJJw4rUCWq5h8yxU6QhNo3t2HaiZlr1pmzXVw8cmvoAL5iuzUFf0gGjGZSQzJe5HxG7PFkL0_6Z8ES9vsTgt5d_wN853xxTJjdKBKy7OmwB2cr_PI1c2BRdjyuJ9HNJsuJ94p_rd6mgGRXqW-NoMs3rQ_21hMw')" }}
           ></div>
           <div className="flex flex-col overflow-hidden">
-            <p className="text-sm font-bold text-text-dark dark:text-white truncate">Dr. Lucha</p>
-            <p className="text-xs text-text-muted dark:text-gray-400 truncate">Pro Plan</p>
+            <p className="text-sm font-bold text-text-dark dark:text-white truncate" title={PROFESSIONAL_PROFILE.name}>{PROFESSIONAL_PROFILE.name}</p>
+            <p className="text-xs text-text-muted dark:text-gray-400 truncate">ISAK Nivel {PROFESSIONAL_PROFILE.isak_level}</p>
           </div>
         </div>
         <button 

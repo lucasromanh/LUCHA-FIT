@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
 import Calendar from './pages/Calendar';
 import Reports from './pages/Reports';
+import Routines from './pages/Routines';
 import Sidebar from './components/Sidebar';
 import { Appointment, Client } from './types';
 import { UPCOMING_APPOINTMENTS, CLIENTS } from './constants';
@@ -17,7 +18,7 @@ const App: React.FC = () => {
   // Global Appointment State (Simulating Database)
   const [appointments, setAppointments] = useState<Appointment[]>(UPCOMING_APPOINTMENTS);
 
-  // State to pass data between Dashboard and Reports
+  // State to pass data between Dashboard and Reports/Routines
   const [selectedClientForReports, setSelectedClientForReports] = useState<Client | null>(null);
   const [reportViewMode, setReportViewMode] = useState<'details' | 'new' | 'list'>('list');
 
@@ -136,6 +137,7 @@ const App: React.FC = () => {
                     { id: 'clients', label: 'Pacientes', icon: 'group' },
                     { id: 'calendar', label: 'Calendario', icon: 'calendar_month' },
                     { id: 'reports', label: 'Mediciones', icon: 'show_chart' },
+                    { id: 'routines', label: 'Rutinas', icon: 'fitness_center' },
                     { id: 'settings', label: 'Configuración', icon: 'settings' },
                   ].map(item => (
                     <button 
@@ -173,6 +175,7 @@ const App: React.FC = () => {
                   externalViewMode={reportViewMode}
               />
           )}
+          {currentPage === 'routines' && <Routines />}
           {currentPage === 'settings' && (
               <div className="flex flex-col items-center justify-center h-full text-text-muted">
                   <span className="material-symbols-outlined text-6xl mb-4 opacity-50">settings</span>

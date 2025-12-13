@@ -227,10 +227,21 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
   const zThighCorr = thighCorr > 0 ? getZScore(thighCorr, 'mid_thigh') : 0;
   const zCalfCorr = calfCorr > 0 ? getZScore(calfCorr, 'calf_girth') : 0;
 
-  // Percents for Muscle Man
+  // Percents for Muscle Man (Right Side)
   const armPerc = d && d.girths.arm_relaxed > 0 ? (armCorr / d.girths.arm_relaxed) * 100 : 0;
   const thighPerc = d && d.girths.mid_thigh > 0 ? (thighCorr / d.girths.mid_thigh) * 100 : 0;
   const calfPerc = d && d.girths.calf_girth > 0 ? (calfCorr / d.girths.calf_girth) * 100 : 0;
+
+  // Percents for Adipose Man (Left Side) - Calculated from Skinfolds distribution
+  const totalSkinfolds = d ? (d.skinfolds.triceps + d.skinfolds.subscapular + d.skinfolds.biceps + d.skinfolds.iliac_crest + d.skinfolds.supraspinale + d.skinfolds.abdominal + d.skinfolds.thigh + d.skinfolds.calf) : 1;
+  
+  // Superior: Triceps + Subscap + Biceps
+  const adiposeSuperior = d ? ((d.skinfolds.triceps + d.skinfolds.subscapular + d.skinfolds.biceps) / totalSkinfolds) * 100 : 0;
+  // Central: Abdominal + Supraespinal + Cresta Iliaca
+  const adiposeCentral = d ? ((d.skinfolds.abdominal + d.skinfolds.supraspinale + d.skinfolds.iliac_crest) / totalSkinfolds) * 100 : 0;
+  // Inferior: Muslo + Pantorrilla
+  const adiposeInferior = d ? ((d.skinfolds.thigh + d.skinfolds.calf) / totalSkinfolds) * 100 : 0;
+
 
   // Sums & Indices
   const sum6 = d ? (d.skinfolds.triceps + d.skinfolds.subscapular + d.skinfolds.supraspinale + d.skinfolds.abdominal + d.skinfolds.thigh + d.skinfolds.calf) : 0;
@@ -563,11 +574,18 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                     <div className="w-full md:w-[400px] relative bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col items-center p-4">
                         <div className="flex justify-between w-full mb-2 font-bold text-sm border-b border-gray-100 pb-2"><span className="text-blue-600">Masa Adiposa</span><span className="text-blue-800">Masa Muscular</span></div>
                         <div className="relative w-full h-[400px]">
-                            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAl6R8JqY3yzsLgF7zGYW7hMpYFuVO6Ir7yDTpNJ80U64DwtwnaRspGuKEUc48HdXXorMJpKTJkwHJH9jGJW-aSMob1CYaeXwwC4fL3K1I_faIRVFtv8Ihy4HWhdvodDV-UxCDElTnHQMRCVs0UbRY3Lt-fwAG0PXNDRcSA265LfS2-K1qHXcQ9mmyasrFHRThFT7lUz_5q2XHfoc-JF8EB-aJSJg3OD9nl4xmF2uPDEqcSkCKGlYLnbf2_OZfksvCqOBYYuXkkMk" alt="Human Muscle Anatomy" className="w-full h-full object-contain opacity-90" />
-                            <div className="absolute top-[18%] right-0 w-32 flex items-center justify-end"><div className="mr-1 text-right"><p className="text-[10px] font-bold text-blue-800 uppercase">Brazo</p><p className="text-sm font-black text-blue-600">{armPerc.toFixed(1)}%</p></div><div className="h-px w-8 bg-blue-600"></div></div>
-                            <div className="absolute top-[38%] left-0 w-32 flex items-center"><div className="h-px w-10 bg-blue-600"></div><div className="ml-1"><p className="text-[10px] font-bold text-blue-800 uppercase">Central</p><p className="text-sm font-black text-blue-600">37.5%</p></div></div>
-                            <div className="absolute top-[50%] right-0 w-32 flex items-center justify-end"><div className="mr-1 text-right"><p className="text-[10px] font-bold text-blue-800 uppercase">Muslo</p><p className="text-sm font-black text-blue-600">{thighPerc.toFixed(1)}%</p></div><div className="h-px w-12 bg-blue-600"></div></div>
-                            <div className="absolute top-[75%] left-0 w-32 flex items-center"><div className="h-px w-14 bg-blue-600"></div><div className="ml-1"><p className="text-[10px] font-bold text-blue-800 uppercase">Pierna</p><p className="text-sm font-black text-blue-600">{calfPerc.toFixed(1)}%</p></div></div>
+                            {/* Gender Neutral Anatomical Illustration */}
+                            <img src="https://cdn.pixabay.com/photo/2012/04/16/11/39/muscles-35532_1280.png" alt="Anatomía Muscular" className="w-full h-full object-contain opacity-80" />
+                            
+                            {/* RIGHT SIDE: MUSCLE PERCENTAGES */}
+                            <div className="absolute top-[25%] right-0 w-32 flex items-center justify-end"><div className="mr-1 text-right"><p className="text-[10px] font-bold text-blue-800 uppercase">Brazo</p><p className="text-sm font-black text-blue-600">{armPerc.toFixed(1)}%</p></div><div className="h-px w-8 bg-blue-600"></div></div>
+                            <div className="absolute top-[55%] right-0 w-32 flex items-center justify-end"><div className="mr-1 text-right"><p className="text-[10px] font-bold text-blue-800 uppercase">Muslo</p><p className="text-sm font-black text-blue-600">{thighPerc.toFixed(1)}%</p></div><div className="h-px w-12 bg-blue-600"></div></div>
+                            <div className="absolute top-[80%] right-0 w-32 flex items-center justify-end"><div className="mr-1 text-right"><p className="text-[10px] font-bold text-blue-800 uppercase">Pierna</p><p className="text-sm font-black text-blue-600">{calfPerc.toFixed(1)}%</p></div><div className="h-px w-14 bg-blue-600"></div></div>
+
+                            {/* LEFT SIDE: ADIPOSE PERCENTAGES (UPDATED) */}
+                            <div className="absolute top-[20%] left-0 w-32 flex items-center"><div className="h-px w-10 bg-blue-600"></div><div className="ml-1"><p className="text-[10px] font-bold text-blue-800 uppercase">Superior</p><p className="text-sm font-black text-blue-600">{adiposeSuperior.toFixed(1)}%</p></div></div>
+                            <div className="absolute top-[45%] left-0 w-32 flex items-center"><div className="h-px w-8 bg-blue-600"></div><div className="ml-1"><p className="text-[10px] font-bold text-blue-800 uppercase">Central</p><p className="text-sm font-black text-blue-600">{adiposeCentral.toFixed(1)}%</p></div></div>
+                            <div className="absolute top-[80%] left-0 w-32 flex items-center"><div className="h-px w-14 bg-blue-600"></div><div className="ml-1"><p className="text-[10px] font-bold text-blue-800 uppercase">Inferior</p><p className="text-sm font-black text-blue-600">{adiposeInferior.toFixed(1)}%</p></div></div>
                         </div>
                     </div>
                 </div>
