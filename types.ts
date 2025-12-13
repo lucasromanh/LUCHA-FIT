@@ -1,6 +1,8 @@
+
 export interface Client {
   id: string;
   name: string;
+  email?: string; // Added
   image: string;
   age: number;
   gender: 'Masculino' | 'Femenino';

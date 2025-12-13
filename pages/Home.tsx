@@ -9,6 +9,7 @@ interface HomeProps {
 
 const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRequestBooking }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState<'form' | 'success'>('form');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -77,46 +78,44 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
       setFormData(prev => ({ ...prev, date: dateValue, time: '' }));
   };
 
-  const availableSlots = useMemo(() => {
-    if (!formData.date) return [];
+  // Defined Time Slots
+  const baseSlots = [
+      '09:00', '10:00', '11:00', '12:00', '13:00', 
+      '14:00', '15:00', '16:00', '17:00'
+  ];
 
-    const selectedDateStr = formData.date; // YYYY-MM-DD
-    const selectedDate = new Date(selectedDateStr + 'T00:00:00');
-    const today = new Date();
-    const isToday = selectedDate.getDate() === today.getDate() && 
-                    selectedDate.getMonth() === today.getMonth() && 
-                    selectedDate.getFullYear() === today.getFullYear();
+  const getSlotStatus = (slot: string) => {
+      if (!formData.date) return { disabled: true, reason: 'no_date' };
 
-    // Base slots from 09:00 to 17:00
-    const baseSlots = [
-        '09:00', '10:00', '11:00', '12:00', '13:00', 
-        '14:00', '15:00', '16:00', '17:00'
-    ];
+      const selectedDateStr = formData.date; // YYYY-MM-DD
+      const selectedDate = new Date(selectedDateStr + 'T00:00:00');
+      const today = new Date();
+      const isToday = selectedDate.getDate() === today.getDate() && 
+                      selectedDate.getMonth() === today.getMonth() && 
+                      selectedDate.getFullYear() === today.getFullYear();
 
-    return baseSlots.filter(slot => {
-        // 1. Filter out past hours if "Today"
-        if (isToday) {
-            const currentHour = today.getHours();
-            const slotHour = parseInt(slot.split(':')[0], 10);
-            if (slotHour <= currentHour) return false;
-        }
+      // Check Past Hours if Today
+      if (isToday) {
+          const currentHour = today.getHours();
+          const slotHour = parseInt(slot.split(':')[0], 10);
+          if (slotHour <= currentHour) return { disabled: true, reason: 'past' };
+      }
 
-        // 2. Filter out already booked slots
-        const isTaken = existingAppointments.some(apt => {
-            // Check match on date string AND time
-            // Note: existingAppointments usually come from constant.ts which might use "24 Oct, 2023" format
-            // but for new appointments created in this session, we use YYYY-MM-DD in rawDate.
-            
-            let dateMatch = false;
-            if (apt.rawDate === selectedDateStr) dateMatch = true;
-            // Fallback for demo data (approximate check, ideally convert all to standard)
-            
-            return dateMatch && apt.startTime === slot;
-        });
+      // Check Taken Slots
+      const isTaken = existingAppointments.some(apt => {
+          let dateMatch = false;
+          if (apt.rawDate === selectedDateStr) dateMatch = true;
+          // Basic fallback if rawDate missing
+          if (!apt.rawDate && apt.date.includes(selectedDateStr.split('-')[2])) {
+             // This is a weak check for demo data, in production use strict ISO dates
+          }
+          return dateMatch && apt.startTime === slot;
+      });
 
-        return !isTaken;
-    });
-  }, [formData.date, existingAppointments]);
+      if (isTaken) return { disabled: true, reason: 'taken' };
+
+      return { disabled: false, reason: 'available' };
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,6 +145,18 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
       setIsLoading(false);
       setBookingStep('success');
     }, 1000);
+  };
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleMobileNav = (id: string) => {
+      setIsMobileMenuOpen(false);
+      scrollToSection(id);
   };
 
   return (
@@ -242,29 +253,40 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
                         <label className="block text-xs font-bold uppercase text-text-muted mb-2">
                             Horarios Disponibles
                         </label>
-                        {availableSlots.length > 0 ? (
-                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                                {availableSlots.map(slot => (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            {baseSlots.map(slot => {
+                                const status = getSlotStatus(slot);
+                                const isSelected = formData.time === slot;
+                                const isAvailable = !status.disabled;
+                                
+                                return (
                                     <button
                                         key={slot}
                                         type="button"
+                                        disabled={status.disabled}
                                         onClick={() => setFormData(prev => ({...prev, time: slot}))}
                                         className={`py-2 px-1 rounded-lg text-sm font-medium transition-all border flex items-center justify-center gap-1
-                                            ${formData.time === slot 
-                                                ? 'bg-text-dark text-white border-text-dark shadow-md' 
-                                                : 'bg-white dark:bg-white/5 border-input-border dark:border-gray-600 text-text-dark dark:text-white hover:border-primary hover:text-primary'}
+                                            ${isSelected 
+                                                ? 'bg-primary border-primary text-black shadow-md scale-105 font-bold' 
+                                                : ''}
+                                            ${isAvailable && !isSelected 
+                                                ? 'bg-white dark:bg-white/5 border-input-border dark:border-gray-600 text-text-dark dark:text-white hover:border-primary hover:text-primary' 
+                                                : ''}
+                                            ${status.disabled 
+                                                ? 'bg-gray-100 dark:bg-white/5 border-transparent text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70' 
+                                                : ''}
                                         `}
                                     >
-                                        <span className="material-symbols-outlined text-[16px] hidden sm:block">schedule</span>
+                                        <span className={`material-symbols-outlined text-[16px] hidden sm:block ${isSelected ? '' : ''}`}>schedule</span>
                                         {slot}
                                     </button>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-sm rounded-lg flex flex-col items-center justify-center gap-1 text-center border border-red-100 dark:border-red-900/30">
-                                <span className="material-symbols-outlined text-2xl">event_busy</span>
-                                <span className="font-bold">Sin cupos</span>
-                                <span className="text-xs opacity-80">Intenta seleccionar otra fecha.</span>
+                                );
+                            })}
+                        </div>
+                        {baseSlots.every(slot => getSlotStatus(slot).disabled) && (
+                            <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-xs rounded-lg flex items-center justify-center gap-2">
+                                <span className="material-symbols-outlined text-base">event_busy</span>
+                                No quedan turnos disponibles para hoy.
                             </div>
                         )}
                       </div>
@@ -339,14 +361,10 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
           </div>
           <div className="hidden md:flex flex-1 justify-end gap-8">
             <div className="flex items-center gap-9">
-              <button onClick={() => {
-                const container = document.querySelector('.overflow-y-auto');
-                if(container) container.scrollTo({top: 0, behavior: 'smooth'});
-                else window.scrollTo({top: 0, behavior: 'smooth'});
-              }} className="text-text-dark dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors">Inicio</button>
-              <button className="text-text-dark dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors">Servicios</button>
-              <button className="text-text-dark dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors">Metodología</button>
-              <button className="text-text-dark dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors">Contacto</button>
+              <button onClick={() => scrollToSection('home')} className="text-text-dark dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors">Inicio</button>
+              <button onClick={() => scrollToSection('services')} className="text-text-dark dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors">Servicios</button>
+              <button onClick={() => scrollToSection('methodology')} className="text-text-dark dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors">Metodología</button>
+              <button onClick={() => scrollToSection('contact')} className="text-text-dark dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors">Contacto</button>
             </div>
             <button 
               onClick={() => onNavigate('login')}
@@ -355,13 +373,46 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
               <span className="truncate">Acceso Profesional</span>
             </button>
           </div>
-          <button className="md:hidden text-text-dark dark:text-white">
-            <span className="material-symbols-outlined">menu</span>
+          <button 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden text-text-dark dark:text-white p-2"
+          >
+            <span className="material-symbols-outlined">{isMobileMenuOpen ? 'close' : 'menu'}</span>
           </button>
         </header>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+            <div className="fixed top-[65px] left-0 w-full h-[calc(100vh-65px)] bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-xl z-40 flex flex-col p-6 gap-4 md:hidden animate-in slide-in-from-top-5 fade-in duration-200 overflow-y-auto">
+                <button onClick={() => handleMobileNav('home')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
+                    Inicio
+                    <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
+                </button>
+                <button onClick={() => handleMobileNav('services')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
+                    Servicios
+                    <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
+                </button>
+                <button onClick={() => handleMobileNav('methodology')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
+                    Metodología
+                    <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
+                </button>
+                <button onClick={() => handleMobileNav('contact')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
+                    Contacto
+                    <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
+                </button>
+                
+                <button 
+                    onClick={() => onNavigate('login')}
+                    className="mt-6 w-full h-14 bg-primary text-text-dark font-bold text-lg rounded-xl shadow-lg flex items-center justify-center gap-2 hover:brightness-105 transition-all"
+                >
+                    <span className="material-symbols-outlined">login</span>
+                    Acceso Profesional
+                </button>
+            </div>
+        )}
       </div>
 
-      <div className="layout-container flex flex-col w-full">
+      <div id="home" className="layout-container flex flex-col w-full">
         <div className="px-4 md:px-10 lg:px-40 flex flex-1 justify-center py-5">
           <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
             <div className="@container">
@@ -378,12 +429,10 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
                   <div className="flex gap-3 flex-wrap">
                     <button 
                       onClick={handleOpenModal}
-                      className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-6 bg-primary text-text-dark text-base font-bold leading-normal tracking-[0.015em] hover:brightness-105 transition-all shadow-lg shadow-primary/20"
+                      className="flex min-w-[200px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-8 bg-primary text-text-dark text-lg font-bold leading-normal tracking-[0.015em] hover:brightness-105 hover:scale-105 transition-all shadow-xl shadow-primary/30"
                     >
-                      <span className="truncate">Comienza tu Transformación</span>
-                    </button>
-                    <button className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-6 bg-transparent border border-text-dark/20 dark:border-white/20 text-text-dark dark:text-white text-base font-medium leading-normal hover:bg-text-dark/5 dark:hover:bg-white/10 transition-all">
-                      <span className="truncate">Ver planes</span>
+                      <span className="truncate">Solicita Turno</span>
+                      <span className="material-symbols-outlined ml-2">calendar_month</span>
                     </button>
                   </div>
                   <div className="flex items-center gap-2 pt-2">
@@ -412,7 +461,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
         </div>
       </div>
 
-      <div className="w-full bg-surface-light dark:bg-surface-dark py-12">
+      <div id="services" className="w-full bg-surface-light dark:bg-surface-dark py-12">
         <div className="layout-container flex flex-col w-full">
           <div className="px-4 md:px-10 lg:px-40 flex flex-1 justify-center">
             <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
@@ -453,7 +502,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
         </div>
       </div>
 
-      <div className="layout-container flex flex-col w-full py-16">
+      <div id="methodology" className="layout-container flex flex-col w-full py-16">
         <div className="px-4 md:px-10 lg:px-40 flex flex-1 justify-center">
           <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
             <div className="mb-10 text-center">
@@ -553,7 +602,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
         </div>
       </div>
 
-      <footer className="bg-background-light dark:bg-background-dark border-t border-[#e7f3eb] dark:border-gray-800 pt-16 pb-8">
+      <footer id="contact" className="bg-background-light dark:bg-background-dark border-t border-[#e7f3eb] dark:border-gray-800 pt-16 pb-8">
         <div className="layout-container flex flex-col w-full">
           <div className="px-4 md:px-10 lg:px-40">
             <div className="max-w-[960px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">

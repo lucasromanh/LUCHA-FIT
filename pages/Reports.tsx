@@ -1,19 +1,240 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { CHART_DATA } from '../constants';
+import { CHART_DATA, CLIENTS } from '../constants';
+import { Client } from '../types';
+
+type ViewMode = 'list' | 'details' | 'new';
 
 const Reports: React.FC = () => {
+  const [view, setView] = useState<ViewMode>('list');
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // --- CLIENT LIST LOGIC ---
+  const filteredClients = useMemo(() => {
+    if (!searchTerm) return CLIENTS;
+    const lowerTerm = searchTerm.toLowerCase();
+    return CLIENTS.filter(c => 
+      c.name.toLowerCase().includes(lowerTerm) || 
+      c.id.toLowerCase().includes(lowerTerm)
+    );
+  }, [searchTerm]);
+
+  const handleSelectClientForReport = (client: Client) => {
+    setSelectedClient(client);
+    setView('details');
+  };
+
+  const handleSelectClientForNew = (client: Client) => {
+    setSelectedClient(client);
+    setView('new');
+  };
+
+  const handleBack = () => {
+    setView('list');
+    setSelectedClient(null);
+  };
+
+  // --- VIEW: CLIENT SELECTION LIST ---
+  if (view === 'list') {
+    return (
+      <div className="flex flex-col gap-8 animate-in fade-in duration-300">
+        <div className="flex flex-col gap-2">
+            <h1 className="text-3xl font-black text-text-dark dark:text-white tracking-tight">Mediciones y Seguimiento</h1>
+            <p className="text-text-muted dark:text-gray-400">Selecciona un atleta para registrar una nueva medición o ver su evolución histórica.</p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative group">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">search</span>
+            <input 
+            type="text" 
+            placeholder="Buscar atleta por nombre o ID..." 
+            className="w-full pl-12 pr-4 h-14 bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl text-text-dark dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all shadow-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
+
+        {/* Clients Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredClients.map(client => (
+                <div key={client.id} className="bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl p-5 hover:shadow-lg transition-all group flex flex-col gap-4">
+                    <div className="flex items-center gap-4">
+                        {client.image ? (
+                            <div className="size-14 rounded-full bg-cover bg-center border-2 border-input-border dark:border-gray-600" style={{ backgroundImage: `url('${client.image}')` }}></div>
+                        ) : (
+                            <div className="size-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl border-2 border-primary/20">
+                                {client.name.substring(0,2).toUpperCase()}
+                            </div>
+                        )}
+                        <div>
+                            <h3 className="font-bold text-lg text-text-dark dark:text-white leading-tight">{client.name}</h3>
+                            <p className="text-xs text-text-muted dark:text-gray-400 font-medium">ID: #{client.id}</p>
+                            <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide
+                                ${client.status === 'Activo' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 
+                                  client.status === 'Pendiente' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : 
+                                  'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                                {client.status}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div className="h-px bg-input-border dark:bg-gray-700 w-full"></div>
+
+                    <div className="grid grid-cols-2 gap-3 mt-auto">
+                        <button 
+                            onClick={() => handleSelectClientForNew(client)}
+                            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-text-dark dark:bg-white text-white dark:text-black font-bold text-sm hover:opacity-90 transition-opacity"
+                        >
+                            <span className="material-symbols-outlined text-[18px]">add</span>
+                            Nueva Medición
+                        </button>
+                        <button 
+                            onClick={() => handleSelectClientForReport(client)}
+                            disabled={client.status === 'Pendiente'} // Example logic
+                            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-input-border dark:border-gray-600 text-text-dark dark:text-white font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <span className="material-symbols-outlined text-[18px]">bar_chart</span>
+                            Ver Progreso
+                        </button>
+                    </div>
+                    {client.lastVisit && (
+                        <p className="text-[10px] text-center text-gray-400 mt-1">
+                            Última visita: {client.lastVisit}
+                        </p>
+                    )}
+                </div>
+            ))}
+        </div>
+      </div>
+    );
+  }
+
+  // --- VIEW: NEW MEASUREMENT FORM ---
+  if (view === 'new' && selectedClient) {
+      return (
+        <div className="flex flex-col gap-6 animate-in slide-in-from-right-5 duration-300">
+             {/* Header with Back Button */}
+            <div className="flex items-center gap-4 border-b border-input-border dark:border-gray-700 pb-4">
+                <button onClick={handleBack} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <span className="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div>
+                    <h1 className="text-2xl font-black text-text-dark dark:text-white">Nueva Medición Antropométrica</h1>
+                    <div className="flex items-center gap-2 text-sm text-text-muted">
+                        <span>Paciente:</span>
+                        <span className="font-bold text-text-dark dark:text-white">{selectedClient.name}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Form Column */}
+                <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl p-6 shadow-sm">
+                    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">straighten</span>
+                        Datos Básicos
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold uppercase text-text-muted">Peso (kg)</label>
+                            <input type="number" placeholder="0.0" className="w-full rounded-lg border border-input-border dark:border-gray-600 bg-background-light dark:bg-black/20 p-2.5 text-text-dark dark:text-white focus:ring-primary focus:border-primary" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold uppercase text-text-muted">Talla (cm)</label>
+                            <input type="number" placeholder="0" className="w-full rounded-lg border border-input-border dark:border-gray-600 bg-background-light dark:bg-black/20 p-2.5 text-text-dark dark:text-white focus:ring-primary focus:border-primary" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold uppercase text-text-muted">Talla Sentado (cm)</label>
+                            <input type="number" placeholder="0" className="w-full rounded-lg border border-input-border dark:border-gray-600 bg-background-light dark:bg-black/20 p-2.5 text-text-dark dark:text-white focus:ring-primary focus:border-primary" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold uppercase text-text-muted">Envergadura (cm)</label>
+                            <input type="number" placeholder="0" className="w-full rounded-lg border border-input-border dark:border-gray-600 bg-background-light dark:bg-black/20 p-2.5 text-text-dark dark:text-white focus:ring-primary focus:border-primary" />
+                        </div>
+                    </div>
+
+                    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">pinch</span>
+                        Pliegues Cutáneos (mm)
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        {['Tríceps', 'Subescapular', 'Bíceps', 'Cresta Ilíaca', 'Supraespinal', 'Abdominal', 'Muslo Medial', 'Pantorrilla'].map(site => (
+                             <div key={site} className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold uppercase text-text-muted truncate" title={site}>{site}</label>
+                                <input type="number" placeholder="0" className="w-full rounded-lg border border-input-border dark:border-gray-600 bg-background-light dark:bg-black/20 p-2 text-sm text-text-dark dark:text-white focus:ring-primary focus:border-primary" />
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-input-border dark:border-gray-700">
+                        <button onClick={handleBack} className="px-6 py-2.5 rounded-lg border border-input-border dark:border-gray-600 text-text-dark dark:text-white font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                            Cancelar
+                        </button>
+                        <button className="px-6 py-2.5 rounded-lg bg-primary text-black font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20">
+                            Guardar Medición
+                        </button>
+                    </div>
+                </div>
+
+                {/* Info Column */}
+                <div className="flex flex-col gap-6">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                        <h4 className="font-bold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
+                            <span className="material-symbols-outlined">info</span>
+                            Protocolo ISAK
+                        </h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-400 leading-relaxed">
+                            Recuerda realizar las mediciones en el lado derecho del cuerpo, independientemente de la lateralidad del sujeto. Asegúrate de que la piel esté seca y libre de lociones.
+                        </p>
+                    </div>
+                    
+                    <div className="bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl p-5 shadow-sm">
+                         <h4 className="font-bold text-text-dark dark:text-white mb-4">Historial Reciente</h4>
+                         <div className="flex flex-col gap-3 relative">
+                            <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-input-border dark:bg-gray-700"></div>
+                            {[
+                                {date: '15 Ene 2024', weight: '78.5 kg'},
+                                {date: '12 Dic 2023', weight: '79.2 kg'},
+                                {date: '10 Nov 2023', weight: '80.5 kg'},
+                            ].map((h, i) => (
+                                <div key={i} className="flex items-center gap-3 relative z-10">
+                                    <div className="size-4 rounded-full bg-primary border-2 border-white dark:border-surface-dark"></div>
+                                    <div className="text-sm">
+                                        <p className="font-medium text-text-dark dark:text-white">{h.date}</p>
+                                        <p className="text-xs text-text-muted">{h.weight}</p>
+                                    </div>
+                                </div>
+                            ))}
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      );
+  }
+
+  // --- VIEW: REPORTS DETAILS (Original Code with minor tweaks) ---
   return (
-    <div className="flex flex-col gap-6">
-      {/* Breadcrumbs */}
+    <div className="flex flex-col gap-6 animate-in slide-in-from-right-5 duration-300">
+      {/* Breadcrumbs & Back */}
       <div className="flex flex-wrap gap-2 items-center text-sm">
-        <a className="text-text-muted hover:text-primary transition-colors font-medium" href="#">Inicio</a>
+        <button onClick={handleBack} className="text-text-muted hover:text-primary transition-colors font-medium flex items-center gap-1">
+            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+            Volver a lista
+        </button>
         <span className="material-symbols-outlined text-[16px] text-gray-300">chevron_right</span>
-        <a className="text-text-muted hover:text-primary transition-colors font-medium" href="#">Clientes</a>
+        <span className="text-text-muted font-medium">Informes</span>
         <span className="material-symbols-outlined text-[16px] text-gray-300">chevron_right</span>
         <div className="flex items-center gap-2">
-          <div className="size-6 rounded-full bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCtzj7Vz29z_fE-SjNzftTNEcGnWHmGbouQZF2eq6D59rZo6buzcNeCoPcfbmRXt-TbSWWzcaH2MNlNPgTW00jV1kXzu-VL0EdLLlOMyscgr8wpRVnXksJYGYhqLPF91oz_cz_3QABovVBXAlu4-Hxxy6xa5JQAFyycZADUwCT3GQyX62IrUParc9Coao_BlmKMyLBDEzd6EOVuwQ7xq49Uf-5k9TU7GpqjdPyIMrA-gEpaa4V-d0-uDY4OQ9tP-WJiXvTIB5yv3-g')" }}></div>
-          <span className="text-text-dark dark:text-white font-medium">Juan Pérez</span>
+          {selectedClient?.image ? (
+              <div className="size-6 rounded-full bg-cover bg-center" style={{ backgroundImage: `url('${selectedClient.image}')` }}></div>
+          ) : (
+             <div className="size-6 rounded-full bg-primary text-black flex items-center justify-center text-xs font-bold">{selectedClient?.name.charAt(0)}</div>
+          )}
+          <span className="text-text-dark dark:text-white font-medium">{selectedClient?.name || 'Cliente'}</span>
         </div>
       </div>
 
@@ -22,7 +243,7 @@ const Reports: React.FC = () => {
         <div className="flex flex-col gap-2 max-w-2xl">
           <h1 className="text-text-dark dark:text-white text-3xl lg:text-4xl font-bold tracking-tight">Informes y Comparativas</h1>
           <p className="text-text-muted dark:text-gray-400 text-base leading-relaxed">
-            Analiza la evolución antropométrica de Juan. Selecciona dos fechas para comparar el progreso, generar gráficos y exportar el informe final.
+            Analiza la evolución antropométrica de <span className="font-bold text-text-dark dark:text-white">{selectedClient?.name}</span>. Selecciona dos fechas para comparar el progreso, generar gráficos y exportar el informe final.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -83,7 +304,7 @@ const Reports: React.FC = () => {
               </div>
               <p className="text-text-muted text-sm font-medium mb-1">Peso Total</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-text-dark dark:text-white">78.5</span>
+                <span className="text-3xl font-bold text-text-dark dark:text-white">{selectedClient?.weight || 78.5}</span>
                 <span className="text-sm text-text-muted">kg</span>
               </div>
               <div className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-primary bg-[#e7f3eb] dark:bg-primary/20 px-2 py-0.5 rounded text-xs">
@@ -111,7 +332,7 @@ const Reports: React.FC = () => {
               </div>
               <p className="text-text-muted text-sm font-medium mb-1">Grasa Corporal</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-text-dark dark:text-white">18.5</span>
+                <span className="text-3xl font-bold text-text-dark dark:text-white">{selectedClient?.bodyFat || 18.5}</span>
                 <span className="text-sm text-text-muted">%</span>
               </div>
               <div className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-primary bg-[#e7f3eb] dark:bg-primary/20 px-2 py-0.5 rounded text-xs">
