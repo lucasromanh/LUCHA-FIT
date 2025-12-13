@@ -4,7 +4,8 @@ import { Client, Appointment, MeasurementRecord, Routine } from './types';
 // Ensure these images are placed in your 'public' folder
 export const ASSETS = {
   logo: '/logo.png',       // The LuchaFit Logo (Apple + Text)
-  profile: '/profile.jpg'  // Luciana's Profile Picture
+  profile: '/profile.jpg', // Luciana's Profile Picture
+  body: '/cuerpohumano.png' // Body Anatomy Image
 };
 
 export const PROFESSIONAL_PROFILE = {
@@ -57,7 +58,7 @@ export const CLIENTS: Client[] = [
   {
     id: 'C-1030',
     name: 'Ana López',
-    image: '', 
+    image: '',
     age: 22,
     gender: 'Femenino',
     weight: 55.0,
@@ -67,7 +68,7 @@ export const CLIENTS: Client[] = [
     goal: 'Rendimiento',
     bodyFat: 19.5
   },
-   {
+  {
     id: 'C-0850',
     name: 'Pedro Sánchez',
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC7ODsUnE_Nk2Al_JVwv3rmqzWH2RuCTW1VNovmqH8xqiuUHtIH_tB8aG9VQuAXrtgbeeTuf3zjRZ4qeB3fdM1rIsJB5sX0zu8pa1ytH96oiTl32lObtY9xlbWBPbXyWJdB7Cdu6bv3VJRXUVi7fpch6hhNLjaUtOOh66WxBEpn84GfdYF_EHONO2_LVyG6uasqvJRz9A9hGPHsTmnr33lm2jCpHDH5G9gR0U7d2O24tq_bMJ2Z8ldt97JCw9hsQemgkZ-d1p3jKsw',
@@ -85,7 +86,7 @@ export const CLIENTS: Client[] = [
 export const UPCOMING_APPOINTMENTS: Appointment[] = [
   {
     id: '1',
-    clientName: 'Juan Pérez', 
+    clientName: 'Juan Pérez',
     type: 'Consulta Inicial',
     date: '24 Oct, 2023',
     startTime: '14:30',
@@ -95,7 +96,7 @@ export const UPCOMING_APPOINTMENTS: Appointment[] = [
   },
   {
     id: '2',
-    clientName: 'María González', 
+    clientName: 'María González',
     type: 'Seguimiento',
     date: '24 Oct, 2023',
     startTime: '16:00',

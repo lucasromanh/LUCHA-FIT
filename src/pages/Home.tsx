@@ -13,7 +13,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState<'form' | 'success'>('form');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,11 +26,11 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
     setBookingStep('form');
     // Reset form on open
     setFormData({
-        name: '',
-        email: '',
-        service: 'Evaluación Antropométrica',
-        date: '',
-        time: ''
+      name: '',
+      email: '',
+      service: 'Evaluación Antropométrica',
+      date: '',
+      time: ''
     });
     setIsModalOpen(true);
   };
@@ -49,7 +49,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
     const dates = [];
     let d = new Date();
     let count = 0;
-    
+
     // Generate next 12 valid days
     while (count < 12) {
       const day = d.getDay();
@@ -60,13 +60,13 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const dateDay = String(d.getDate()).padStart(2, '0');
         const dateStr = `${year}-${month}-${dateDay}`;
-        
+
         dates.push({
-            value: dateStr,
-            dateObj: new Date(d),
-            labelDay: d.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', ''),
-            labelDate: d.getDate(),
-            labelMonth: d.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '')
+          value: dateStr,
+          dateObj: new Date(d),
+          labelDay: d.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', ''),
+          labelDate: d.getDate(),
+          labelMonth: d.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '')
         });
         count++;
       }
@@ -76,46 +76,46 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
   }, []);
 
   const handleDateSelect = (dateValue: string) => {
-      setFormData(prev => ({ ...prev, date: dateValue, time: '' }));
+    setFormData(prev => ({ ...prev, date: dateValue, time: '' }));
   };
 
   // Defined Time Slots
   const baseSlots = [
-      '09:00', '10:00', '11:00', '12:00', '13:00', 
-      '14:00', '15:00', '16:00', '17:00'
+    '09:00', '10:00', '11:00', '12:00', '13:00',
+    '14:00', '15:00', '16:00', '17:00'
   ];
 
   const getSlotStatus = (slot: string) => {
-      if (!formData.date) return { disabled: true, reason: 'no_date' };
+    if (!formData.date) return { disabled: true, reason: 'no_date' };
 
-      const selectedDateStr = formData.date; // YYYY-MM-DD
-      const selectedDate = new Date(selectedDateStr + 'T00:00:00');
-      const today = new Date();
-      const isToday = selectedDate.getDate() === today.getDate() && 
-                      selectedDate.getMonth() === today.getMonth() && 
-                      selectedDate.getFullYear() === today.getFullYear();
+    const selectedDateStr = formData.date; // YYYY-MM-DD
+    const selectedDate = new Date(selectedDateStr + 'T00:00:00');
+    const today = new Date();
+    const isToday = selectedDate.getDate() === today.getDate() &&
+      selectedDate.getMonth() === today.getMonth() &&
+      selectedDate.getFullYear() === today.getFullYear();
 
-      // Check Past Hours if Today
-      if (isToday) {
-          const currentHour = today.getHours();
-          const slotHour = parseInt(slot.split(':')[0], 10);
-          if (slotHour <= currentHour) return { disabled: true, reason: 'past' };
+    // Check Past Hours if Today
+    if (isToday) {
+      const currentHour = today.getHours();
+      const slotHour = parseInt(slot.split(':')[0], 10);
+      if (slotHour <= currentHour) return { disabled: true, reason: 'past' };
+    }
+
+    // Check Taken Slots
+    const isTaken = existingAppointments.some(apt => {
+      let dateMatch = false;
+      if (apt.rawDate === selectedDateStr) dateMatch = true;
+      // Basic fallback if rawDate missing
+      if (!apt.rawDate && apt.date.includes(selectedDateStr.split('-')[2])) {
+        // This is a weak check for demo data, in production use strict ISO dates
       }
+      return dateMatch && apt.startTime === slot;
+    });
 
-      // Check Taken Slots
-      const isTaken = existingAppointments.some(apt => {
-          let dateMatch = false;
-          if (apt.rawDate === selectedDateStr) dateMatch = true;
-          // Basic fallback if rawDate missing
-          if (!apt.rawDate && apt.date.includes(selectedDateStr.split('-')[2])) {
-             // This is a weak check for demo data, in production use strict ISO dates
-          }
-          return dateMatch && apt.startTime === slot;
-      });
+    if (isTaken) return { disabled: true, reason: 'taken' };
 
-      if (isTaken) return { disabled: true, reason: 'taken' };
-
-      return { disabled: false, reason: 'available' };
+    return { disabled: false, reason: 'available' };
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -126,22 +126,22 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
 
     // Create appointment object
     const newAppointment: Appointment = {
-        id: Math.random().toString(36).substr(2, 9),
-        clientName: formData.name,
-        email: formData.email,
-        type: formData.service,
-        date: new Date(formData.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
-        rawDate: formData.date,
-        startTime: formData.time,
-        endTime: `${parseInt(formData.time.split(':')[0]) + 1}:00`,
-        status: 'pending_approval',
-        colorClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
+      id: Math.random().toString(36).substr(2, 9),
+      clientName: formData.name,
+      email: formData.email,
+      type: formData.service,
+      date: new Date(formData.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
+      rawDate: formData.date,
+      startTime: formData.time,
+      endTime: `${parseInt(formData.time.split(':')[0]) + 1}:00`,
+      status: 'pending_approval',
+      colorClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
     };
 
     // Simulate Network Request
     setTimeout(() => {
       // Add to global state
-      if(onRequestBooking) onRequestBooking(newAppointment);
+      if (onRequestBooking) onRequestBooking(newAppointment);
 
       setIsLoading(false);
       setBookingStep('success');
@@ -156,18 +156,18 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
   };
 
   const handleMobileNav = (id: string) => {
-      setIsMobileMenuOpen(false);
-      scrollToSection(id);
+    setIsMobileMenuOpen(false);
+    scrollToSection(id);
   };
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-x-hidden overflow-y-auto bg-background-light dark:bg-background-dark text-text-dark dark:text-gray-100 font-display transition-colors duration-200">
-      
+
       {/* Booking Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
           <div className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-input-border dark:border-gray-700 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-            
+
             {/* Modal Header */}
             <div className="p-6 border-b border-input-border dark:border-gray-700 flex justify-between items-center bg-background-light dark:bg-black/20 shrink-0">
               <h3 className="text-xl font-bold text-text-dark dark:text-white">
@@ -182,37 +182,37 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
             <div className="p-6 overflow-y-auto custom-scrollbar">
               {bookingStep === 'form' ? (
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                   {/* Personal Info */}
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold uppercase text-text-muted mb-1">Nombre Completo</label>
-                            <input 
-                            required
-                            name="name"
-                            value={formData.name}
-                            onChange={handleInputChange}
-                            type="text" 
-                            placeholder="Ej. Juan Pérez" 
-                            className="w-full rounded-lg border border-input-border bg-white dark:bg-[#102216] dark:border-gray-700 dark:text-white h-11 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase text-text-muted mb-1">Correo Electrónico</label>
-                            <input 
-                            required
-                            name="email"
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            type="email" 
-                            placeholder="tucorreo@ejemplo.com" 
-                            className="w-full rounded-lg border border-input-border bg-white dark:bg-[#102216] dark:border-gray-700 dark:text-white h-11 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                            />
-                        </div>
-                   </div>
+                  {/* Personal Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-text-muted mb-1">Nombre Completo</label>
+                      <input
+                        required
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        type="text"
+                        placeholder="Ej. Juan Pérez"
+                        className="w-full rounded-lg border border-input-border bg-white dark:bg-[#102216] dark:border-gray-700 dark:text-white h-11 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-text-muted mb-1">Correo Electrónico</label>
+                      <input
+                        required
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        type="email"
+                        placeholder="tucorreo@ejemplo.com"
+                        className="w-full rounded-lg border border-input-border bg-white dark:bg-[#102216] dark:border-gray-700 dark:text-white h-11 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                    </div>
+                  </div>
 
                   <div>
                     <label className="block text-xs font-bold uppercase text-text-muted mb-1">Servicio</label>
-                    <select 
+                    <select
                       name="service"
                       value={formData.service}
                       onChange={handleInputChange}
@@ -224,85 +224,85 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
                       <option>Pack Completo</option>
                     </select>
                   </div>
-                  
+
                   {/* Date Selection Grid */}
                   <div>
-                      <label className="block text-xs font-bold uppercase text-text-muted mb-2">Selecciona un Día</label>
-                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                        {availableDates.map((item) => (
-                          <button
-                            key={item.value}
-                            type="button"
-                            onClick={() => handleDateSelect(item.value)}
-                            className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all h-16
-                              ${formData.date === item.value 
-                                ? 'bg-primary border-primary text-black shadow-md scale-105' 
-                                : 'bg-white dark:bg-white/5 border-input-border dark:border-gray-600 text-text-dark dark:text-gray-300 hover:border-primary hover:text-primary'}
+                    <label className="block text-xs font-bold uppercase text-text-muted mb-2">Selecciona un Día</label>
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      {availableDates.map((item) => (
+                        <button
+                          key={item.value}
+                          type="button"
+                          onClick={() => handleDateSelect(item.value)}
+                          className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all h-16
+                              ${formData.date === item.value
+                              ? 'bg-primary border-primary text-black shadow-md scale-105'
+                              : 'bg-white dark:bg-white/5 border-input-border dark:border-gray-600 text-text-dark dark:text-gray-300 hover:border-primary hover:text-primary'}
                             `}
-                          >
-                            <span className="text-[10px] uppercase font-bold opacity-70">{item.labelDay}</span>
-                            <span className="text-lg font-black leading-none">{item.labelDate}</span>
-                            <span className="text-[9px] font-medium opacity-60">{item.labelMonth}</span>
-                          </button>
-                        ))}
-                      </div>
+                        >
+                          <span className="text-[10px] uppercase font-bold opacity-70">{item.labelDay}</span>
+                          <span className="text-lg font-black leading-none">{item.labelDate}</span>
+                          <span className="text-[9px] font-medium opacity-60">{item.labelMonth}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Time Slots */}
                   {formData.date && (
-                      <div className="animate-in fade-in slide-in-from-top-2 border-t border-dashed border-input-border dark:border-gray-700 pt-4">
-                        <label className="block text-xs font-bold uppercase text-text-muted mb-2">
-                            Horarios Disponibles
-                        </label>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                            {baseSlots.map(slot => {
-                                const status = getSlotStatus(slot);
-                                const isSelected = formData.time === slot;
-                                const isAvailable = !status.disabled;
-                                
-                                return (
-                                    <button
-                                        key={slot}
-                                        type="button"
-                                        disabled={status.disabled}
-                                        onClick={() => setFormData(prev => ({...prev, time: slot}))}
-                                        className={`py-2 px-1 rounded-lg text-sm font-medium transition-all border flex items-center justify-center gap-1
-                                            ${isSelected 
-                                                ? 'bg-primary border-primary text-black shadow-md scale-105 font-bold' 
-                                                : ''}
-                                            ${isAvailable && !isSelected 
-                                                ? 'bg-white dark:bg-white/5 border-input-border dark:border-gray-600 text-text-dark dark:text-white hover:border-primary hover:text-primary' 
-                                                : ''}
-                                            ${status.disabled 
-                                                ? 'bg-gray-100 dark:bg-white/5 border-transparent text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70' 
-                                                : ''}
+                    <div className="animate-in fade-in slide-in-from-top-2 border-t border-dashed border-input-border dark:border-gray-700 pt-4">
+                      <label className="block text-xs font-bold uppercase text-text-muted mb-2">
+                        Horarios Disponibles
+                      </label>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {baseSlots.map(slot => {
+                          const status = getSlotStatus(slot);
+                          const isSelected = formData.time === slot;
+                          const isAvailable = !status.disabled;
+
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              disabled={status.disabled}
+                              onClick={() => setFormData(prev => ({ ...prev, time: slot }))}
+                              className={`py-2 px-1 rounded-lg text-sm font-medium transition-all border flex items-center justify-center gap-1
+                                            ${isSelected
+                                  ? 'bg-primary border-primary text-black shadow-md scale-105 font-bold'
+                                  : ''}
+                                            ${isAvailable && !isSelected
+                                  ? 'bg-white dark:bg-white/5 border-input-border dark:border-gray-600 text-text-dark dark:text-white hover:border-primary hover:text-primary'
+                                  : ''}
+                                            ${status.disabled
+                                  ? 'bg-gray-100 dark:bg-white/5 border-transparent text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70'
+                                  : ''}
                                         `}
-                                    >
-                                        <span className={`material-symbols-outlined text-[16px] hidden sm:block ${isSelected ? '' : ''}`}>schedule</span>
-                                        {slot}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        {baseSlots.every(slot => getSlotStatus(slot).disabled) && (
-                            <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-xs rounded-lg flex items-center justify-center gap-2">
-                                <span className="material-symbols-outlined text-base">event_busy</span>
-                                No quedan turnos disponibles para hoy.
-                            </div>
-                        )}
+                            >
+                              <span className={`material-symbols-outlined text-[16px] hidden sm:block ${isSelected ? '' : ''}`}>schedule</span>
+                              {slot}
+                            </button>
+                          );
+                        })}
                       </div>
+                      {baseSlots.every(slot => getSlotStatus(slot).disabled) && (
+                        <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-xs rounded-lg flex items-center justify-center gap-2">
+                          <span className="material-symbols-outlined text-base">event_busy</span>
+                          No quedan turnos disponibles para hoy.
+                        </div>
+                      )}
+                    </div>
                   )}
-                  
+
                   <div className="pt-4 flex gap-3 mt-auto">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={handleCloseModal}
                       className="flex-1 rounded-lg h-12 border border-input-border dark:border-gray-600 text-text-dark dark:text-white font-bold text-sm hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
                     >
                       Cancelar
                     </button>
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       disabled={isLoading || !formData.date || !formData.time}
                       className="flex-1 rounded-lg h-12 bg-primary text-text-dark font-bold text-sm hover:brightness-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -326,20 +326,20 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     Tu turno ha sido pre-seleccionado. El Dr. Lucha revisará la disponibilidad y recibirás un mail de confirmación en <span className="font-bold text-text-dark dark:text-white">{formData.email}</span> cuando sea aprobado.
                   </p>
-                  
+
                   <div className="w-full bg-[#f8fcf9] dark:bg-white/5 rounded-xl p-4 border border-input-border dark:border-gray-700 mt-2">
-                     <p className="text-xs font-bold uppercase text-text-muted mb-2">Detalles Solicitados</p>
-                     <p className="font-bold text-lg text-text-dark dark:text-white">{formData.service}</p>
-                     <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-                       {new Date(formData.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} • {formData.time} hs
-                     </p>
+                    <p className="text-xs font-bold uppercase text-text-muted mb-2">Detalles Solicitados</p>
+                    <p className="font-bold text-lg text-text-dark dark:text-white">{formData.service}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
+                      {new Date(formData.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} • {formData.time} hs
+                    </p>
                   </div>
 
                   <p className="text-xs text-gray-400 mt-2 italic">
-                      Nota: Este horario ya no aparecerá disponible para otros usuarios mientras revisamos tu solicitud.
+                    Nota: Este horario ya no aparecerá disponible para otros usuarios mientras revisamos tu solicitud.
                   </p>
-                  
-                  <button 
+
+                  <button
                     onClick={handleCloseModal}
                     className="text-primary font-bold text-sm mt-4 hover:underline"
                   >
@@ -355,7 +355,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
       <div className="layout-container flex w-full flex-col">
         <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7f3eb] dark:border-b-[#1f3526] bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm px-4 lg:px-40 py-3">
           <div className="flex items-center gap-4 text-text-dark dark:text-white">
-            <img src={ASSETS.logo} alt="LUCHA-FIT" className="h-10 w-auto object-contain" />
+            <img src={ASSETS.logo} alt="LUCHA-FIT" className="h-20 w-auto object-contain" />
           </div>
           <div className="hidden md:flex flex-1 justify-end gap-8">
             <div className="flex items-center gap-9">
@@ -364,14 +364,14 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
               <button onClick={() => scrollToSection('methodology')} className="text-text-dark dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors">Metodología</button>
               <button onClick={() => scrollToSection('contact')} className="text-text-dark dark:text-gray-200 text-sm font-medium leading-normal hover:text-primary transition-colors">Contacto</button>
             </div>
-            <button 
+            <button
               onClick={() => onNavigate('login')}
               className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-text-dark hover:bg-opacity-90 transition-opacity text-sm font-bold leading-normal tracking-[0.015em]"
             >
               <span className="truncate">Acceso Profesional</span>
             </button>
           </div>
-          <button 
+          <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="md:hidden text-text-dark dark:text-white p-2"
           >
@@ -381,32 +381,32 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-            <div className="fixed top-[65px] left-0 w-full h-[calc(100vh-65px)] bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-xl z-40 flex flex-col p-6 gap-4 md:hidden animate-in slide-in-from-top-5 fade-in duration-200 overflow-y-auto">
-                <button onClick={() => handleMobileNav('home')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
-                    Inicio
-                    <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
-                </button>
-                <button onClick={() => handleMobileNav('services')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
-                    Servicios
-                    <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
-                </button>
-                <button onClick={() => handleMobileNav('methodology')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
-                    Metodología
-                    <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
-                </button>
-                <button onClick={() => handleMobileNav('contact')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
-                    Contacto
-                    <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
-                </button>
-                
-                <button 
-                    onClick={() => onNavigate('login')}
-                    className="mt-6 w-full h-14 bg-primary text-text-dark font-bold text-lg rounded-xl shadow-lg flex items-center justify-center gap-2 hover:brightness-105 transition-all"
-                >
-                    <span className="material-symbols-outlined">login</span>
-                    Acceso Profesional
-                </button>
-            </div>
+          <div className="fixed top-[65px] left-0 w-full h-[calc(100vh-65px)] bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-xl z-40 flex flex-col p-6 gap-4 md:hidden animate-in slide-in-from-top-5 fade-in duration-200 overflow-y-auto">
+            <button onClick={() => handleMobileNav('home')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
+              Inicio
+              <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
+            </button>
+            <button onClick={() => handleMobileNav('services')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
+              Servicios
+              <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
+            </button>
+            <button onClick={() => handleMobileNav('methodology')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
+              Metodología
+              <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
+            </button>
+            <button onClick={() => handleMobileNav('contact')} className="text-xl font-bold text-text-dark dark:text-white py-4 border-b border-gray-200 dark:border-gray-800 text-left flex items-center justify-between group">
+              Contacto
+              <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">arrow_forward</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('login')}
+              className="mt-6 w-full h-14 bg-primary text-text-dark font-bold text-lg rounded-xl shadow-lg flex items-center justify-center gap-2 hover:brightness-105 transition-all"
+            >
+              <span className="material-symbols-outlined">login</span>
+              Acceso Profesional
+            </button>
+          </div>
         )}
       </div>
 
@@ -425,7 +425,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
                     </h2>
                   </div>
                   <div className="flex gap-3 flex-wrap">
-                    <button 
+                    <button
                       onClick={handleOpenModal}
                       className="flex min-w-[200px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-8 bg-primary text-text-dark text-lg font-bold leading-normal tracking-[0.015em] hover:brightness-105 hover:scale-105 transition-all shadow-xl shadow-primary/30"
                     >
@@ -442,8 +442,8 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
                     <p className="text-xs font-medium text-text-dark dark:text-gray-400">+500 atletas optimizados</p>
                   </div>
                 </div>
-                <div 
-                  className="w-full flex-1 aspect-square max-h-[500px] bg-center bg-no-repeat bg-cover rounded-2xl shadow-xl overflow-hidden relative group" 
+                <div
+                  className="w-full flex-1 aspect-square max-h-[500px] bg-center bg-no-repeat bg-cover rounded-2xl shadow-xl overflow-hidden relative group"
                   style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAwpOzQgqydbIJy7BqLKbtjIp4uMQOxsnJ54J-FB3Jjx6Uqh3ZlAEbF5Yu-eshJRw_LHwEE-vMKhrWh4hastPd3YOi_3eammamttyXIgu8Qn_95EFItbVMstVJOlK9vv13ElhnJAh3gNaEB_Qjjf9G9IjJTX5imxGlgWyWiwh1ucNhAoDJZhSjSflXVsQRbOx4n-r9MgSDJmQYznA_-GghNjPnuc9clHDcv1DF72gSEUa3dRHAKY3-MacEVr-1FlGk-DYo4m_20VqU')" }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
@@ -515,17 +515,17 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
                 { title: 'Ejecución y Control', desc: 'Seguimiento mensual para ajustar macros y cargas de trabajo. ¡Resultados garantizados!', icon: 'published_with_changes', last: true }
               ].map((step, idx) => (
                 <React.Fragment key={idx}>
-                   <div className="flex flex-col items-center gap-1 pt-1">
-                     {!step.last && idx > 0 && <div className="w-[2px] bg-[#cfe7d7] dark:bg-gray-700 h-2"></div>}
-                     <div className="bg-primary/20 p-2 rounded-full text-primary dark:text-primary flex items-center justify-center">
-                       <span className="material-symbols-outlined text-[20px]">{step.icon}</span>
-                     </div>
-                     {!step.last && <div className="w-[2px] bg-[#cfe7d7] dark:bg-gray-700 h-full grow min-h-[40px]"></div>}
-                   </div>
-                   <div className={`flex flex-1 flex-col ${step.last ? 'pb-4' : 'pb-8'} pt-1`}>
-                     <p className="text-text-dark dark:text-white text-lg font-bold leading-normal">{step.title}</p>
-                     <p className="text-gray-600 dark:text-gray-400 text-base font-normal leading-normal">{step.desc}</p>
-                   </div>
+                  <div className="flex flex-col items-center gap-1 pt-1">
+                    {!step.last && idx > 0 && <div className="w-[2px] bg-[#cfe7d7] dark:bg-gray-700 h-2"></div>}
+                    <div className="bg-primary/20 p-2 rounded-full text-primary dark:text-primary flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[20px]">{step.icon}</span>
+                    </div>
+                    {!step.last && <div className="w-[2px] bg-[#cfe7d7] dark:bg-gray-700 h-full grow min-h-[40px]"></div>}
+                  </div>
+                  <div className={`flex flex-1 flex-col ${step.last ? 'pb-4' : 'pb-8'} pt-1`}>
+                    <p className="text-text-dark dark:text-white text-lg font-bold leading-normal">{step.title}</p>
+                    <p className="text-gray-600 dark:text-gray-400 text-base font-normal leading-normal">{step.desc}</p>
+                  </div>
                 </React.Fragment>
               ))}
             </div>
@@ -589,7 +589,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
             <p className="text-text-dark/80 font-medium">Agenda tu primera cita de evaluación hoy mismo y recibe un 10% de descuento.</p>
           </div>
           <div className="relative z-10">
-            <button 
+            <button
               onClick={handleOpenModal}
               className="bg-[#0d1b12] text-white px-8 py-3 rounded-lg font-bold hover:scale-105 transition-transform flex items-center gap-2"
             >
@@ -606,7 +606,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
             <div className="max-w-[960px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
               <div className="col-span-1 md:col-span-2">
                 <div className="flex items-center gap-2 text-text-dark dark:text-white mb-4">
-                  <img src={ASSETS.logo} alt="LUCHA-FIT" className="h-10 w-auto object-contain" />
+                  <img src={ASSETS.logo} alt="LUCHA-FIT" className="h-16 w-auto object-contain" />
                 </div>
                 <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs">
                   Especialistas en antropometría y rendimiento deportivo. Transformamos datos en resultados visibles.
