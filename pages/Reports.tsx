@@ -453,8 +453,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
           <div className="p-10 text-center border-2 border-dashed border-gray-300 rounded-xl text-gray-500">No hay mediciones registradas.<button onClick={() => {initNewForm(); setView('new');}} className="block mx-auto mt-4 text-primary font-bold hover:underline">Crear primera medición</button></div>
       ) : (
       <>
-        {/* --- SECTIONS 1 & 2 & 3: Original Content (Tables, Z-Scores, Somatotype, Muscle Man, Detalle Antropométrico) --- */}
-        {/* ... (Existing code for first sections) ... */}
+        {/* --- SECTIONS 1: METRICS TABLES & Z-SCORES --- */}
         {ANTHRO_SECTIONS.map((section) => (
         <div key={section.id} className="bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-white/5 shadow-sm overflow-hidden">
             <div className="p-4 bg-gray-50 dark:bg-white/5 border-b border-input-border dark:border-white/5 flex items-center gap-2 justify-between">
@@ -499,7 +498,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
         </div>
         ))}
 
-        {/* Somatotipo & Muscle Man & Detalle Antropométrico */}
+        {/* --- SECTION 2: SOMATOTYPE & BODY COMPOSITION --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-white/5 shadow-sm p-0 overflow-hidden flex flex-col h-full">
                 <div className="bg-primary text-white p-3 font-bold px-5">Somatotipo (Heath-Carter)</div>
@@ -544,11 +543,12 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
             
             <div className="col-span-1 lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-white/5 shadow-sm p-0 overflow-hidden">
                 <div className="bg-blue-600 text-white p-3 font-bold px-5">Distribución Adiposo-Muscular</div>
-                <div className="p-5 flex flex-col md:flex-row gap-8">
-                    <div className="flex-1 min-h-[300px]">
+                <div className="p-6 flex flex-col md:flex-row gap-8 items-center">
+                    {/* Bar Chart Section */}
+                    <div className="flex-1 w-full h-[350px] min-h-[350px]">
                         <h4 className="text-sm font-bold text-center mb-4 text-gray-500">Perímetros: Total vs Corregido (cm)</h4>
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart layout="vertical" data={barChartData} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                            <BarChart layout="vertical" data={barChartData} margin={{ top: 20, right: 30, left: 40, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                                 <XAxis type="number" />
                                 <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 12, fontWeight: 'bold'}} />
@@ -559,18 +559,15 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
+                    {/* Muscle Man Section */}
                     <div className="w-full md:w-[400px] relative bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col items-center p-4">
                         <div className="flex justify-between w-full mb-2 font-bold text-sm border-b border-gray-100 pb-2"><span className="text-blue-600">Masa Adiposa</span><span className="text-blue-800">Masa Muscular</span></div>
-                        <div className="relative w-[240px] h-[360px] mx-auto mt-2">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Muscles_anterior_labeled.png/512px-Muscles_anterior_labeled.png" alt="Human Muscle Anatomy" className="w-full h-full object-contain opacity-90" />
-                            <div className="absolute top-[18%] right-[-50px] w-32 flex items-center"><div className="h-px w-8 bg-blue-600"></div><div className="ml-1"><p className="text-[10px] font-bold text-blue-800 uppercase">Brazo</p><p className="text-sm font-black text-blue-600">{armPerc.toFixed(1)}%</p></div></div>
-                            <div className="absolute top-[22%] right-[55px] w-2 h-2 bg-blue-600 rounded-full"></div>
-                            <div className="absolute top-[38%] left-[-40px] w-32 flex items-center justify-end text-right"><div className="mr-1"><p className="text-[10px] font-bold text-blue-800 uppercase">Central</p><p className="text-sm font-black text-blue-600">37.5%</p></div><div className="h-px w-10 bg-blue-600"></div></div>
-                            <div className="absolute top-[42%] left-[60px] w-2 h-2 bg-blue-600 rounded-full"></div>
-                            <div className="absolute top-[50%] right-[-50px] w-32 flex items-center"><div className="h-px w-12 bg-blue-600"></div><div className="ml-1"><p className="text-[10px] font-bold text-blue-800 uppercase">Muslo</p><p className="text-sm font-black text-blue-600">{thighPerc.toFixed(1)}%</p></div></div>
-                            <div className="absolute top-[53%] right-[70px] w-2 h-2 bg-blue-600 rounded-full"></div>
-                            <div className="absolute top-[75%] left-[-40px] w-32 flex items-center justify-end text-right"><div className="mr-1"><p className="text-[10px] font-bold text-blue-800 uppercase">Pierna</p><p className="text-sm font-black text-blue-600">{calfPerc.toFixed(1)}%</p></div><div className="h-px w-14 bg-blue-600"></div></div>
-                            <div className="absolute top-[78%] left-[70px] w-2 h-2 bg-blue-600 rounded-full"></div>
+                        <div className="relative w-full h-[400px]">
+                            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAl6R8JqY3yzsLgF7zGYW7hMpYFuVO6Ir7yDTpNJ80U64DwtwnaRspGuKEUc48HdXXorMJpKTJkwHJH9jGJW-aSMob1CYaeXwwC4fL3K1I_faIRVFtv8Ihy4HWhdvodDV-UxCDElTnHQMRCVs0UbRY3Lt-fwAG0PXNDRcSA265LfS2-K1qHXcQ9mmyasrFHRThFT7lUz_5q2XHfoc-JF8EB-aJSJg3OD9nl4xmF2uPDEqcSkCKGlYLnbf2_OZfksvCqOBYYuXkkMk" alt="Human Muscle Anatomy" className="w-full h-full object-contain opacity-90" />
+                            <div className="absolute top-[18%] right-0 w-32 flex items-center justify-end"><div className="mr-1 text-right"><p className="text-[10px] font-bold text-blue-800 uppercase">Brazo</p><p className="text-sm font-black text-blue-600">{armPerc.toFixed(1)}%</p></div><div className="h-px w-8 bg-blue-600"></div></div>
+                            <div className="absolute top-[38%] left-0 w-32 flex items-center"><div className="h-px w-10 bg-blue-600"></div><div className="ml-1"><p className="text-[10px] font-bold text-blue-800 uppercase">Central</p><p className="text-sm font-black text-blue-600">37.5%</p></div></div>
+                            <div className="absolute top-[50%] right-0 w-32 flex items-center justify-end"><div className="mr-1 text-right"><p className="text-[10px] font-bold text-blue-800 uppercase">Muslo</p><p className="text-sm font-black text-blue-600">{thighPerc.toFixed(1)}%</p></div><div className="h-px w-12 bg-blue-600"></div></div>
+                            <div className="absolute top-[75%] left-0 w-32 flex items-center"><div className="h-px w-14 bg-blue-600"></div><div className="ml-1"><p className="text-[10px] font-bold text-blue-800 uppercase">Pierna</p><p className="text-sm font-black text-blue-600">{calfPerc.toFixed(1)}%</p></div></div>
                         </div>
                     </div>
                 </div>
