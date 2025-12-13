@@ -94,6 +94,103 @@ interface ReportsProps {
     externalViewMode?: 'new' | 'details' | 'list';
 }
 
+// --- CALCULATION HELPERS (Moved outside component) ---
+
+const getMetricValue = (record: MeasurementRecord | null, sectionId: string, metricId: string): number => {
+    if (!record || !record.data) return 0;
+    // @ts-ignore
+    return record.data[sectionId]?.[metricId] || 0;
+};
+
+const calcDiff = (curr: number, prev: number) => curr - prev;
+const calcPercent = (curr: number, prev: number) => prev === 0 ? 0 : ((curr - prev) / prev) * 100;
+
+const getZScore = (val: number, metricId: string) => {
+    const ref = PHANTOM_REF[metricId];
+    if (!ref || val === 0) return 0;
+    return (val - ref.mean) / ref.sd;
+};
+
+const calcCorrectedGirth = (girthCm: number, skinfoldMm: number) => {
+    return girthCm - (Math.PI * (skinfoldMm / 10));
+};
+
+const calcFaulkner = (triceps: number, subscap: number, supra: number, abd: number) => {
+    const sum4 = triceps + subscap + supra + abd;
+    return (sum4 * 0.153) + 5.783;
+};
+
+const calcSomatotype = (data: AnthropometricData) => {
+    if (!data) return { endo: 0, meso: 0, ecto: 0, x: 0, y: 0 };
+
+    const { triceps, subscapular, supraspinale } = data.skinfolds;
+    const { humerus, femur } = data.breadths;
+    const { arm_flexed, calf_girth } = data.girths;
+    const { stature, mass } = data.basic;
+    const calf_skinfold = data.skinfolds.calf;
+
+    // Endomorphy
+    const sum3 = triceps + subscapular + supraspinale;
+    const endo = -0.7182 + (0.1451 * sum3) - (0.00068 * Math.pow(sum3, 2)) + (0.0000014 * Math.pow(sum3, 3));
+
+    // Mesomorphy
+    const arm_corr = arm_flexed - (triceps / 10);
+    const calf_corr = calf_girth - (calf_skinfold / 10);
+    const meso = (0.858 * humerus) + (0.601 * femur) + (0.188 * arm_corr) + (0.161 * calf_corr) - (0.131 * stature) + 4.5;
+
+    // Ectomorphy
+    const hwr = stature / Math.pow(mass, 0.3333);
+    let ecto = 0;
+    if (hwr >= 40.75) ecto = (0.732 * hwr) - 28.58;
+    else if (hwr >= 38.25) ecto = (0.463 * hwr) - 17.63;
+    else ecto = 0.1;
+
+    // Chart Coordinates
+    const x = ecto - endo;
+    const y = (2 * meso) - (ecto + endo);
+
+    return { endo, meso, ecto, x, y };
+};
+
+// Define allowed difference (Threshold) per section type
+const getAllowedDiff = (sectionId: string) => {
+    switch (sectionId) {
+        case 'skinfolds': return 1.0; // > 1mm
+        case 'breadths': return 0.2; // > 2mm (0.2cm)
+        case 'girths': return 0.5; // > 5mm (0.5cm)
+        case 'basic': return 0.5; // Default safe threshold for basics
+        default: return 9999;
+    }
+};
+
+interface ZScoreRowProps { label: string; value: number; metricId: string; }
+
+const ZScoreRow: React.FC<ZScoreRowProps> = ({ label, value, metricId }) => {
+    const z = getZScore(value, metricId);
+    const clampedZ = Math.max(-3.5, Math.min(3.5, z));
+    const leftPos = ((clampedZ + 4) / 8) * 100;
+    return (
+        <div className="flex items-center text-xs py-1.5 border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5">
+            <div className="w-32 truncate font-medium text-text-dark dark:text-gray-300 pr-2" title={label}>{label}</div>
+            <div className="flex-1 relative h-6 flex items-center">
+                <div className="absolute inset-0 flex justify-between px-[12.5%] text-[8px] text-gray-300">
+                    <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
+                    <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
+                    <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
+                    <div className="h-full w-0.5 bg-blue-300 dark:bg-blue-700"></div>
+                    <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
+                    <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
+                    <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
+                </div>
+                <div className="absolute w-full h-px bg-blue-200 dark:bg-blue-800"></div>
+                <div className="absolute size-2.5 bg-blue-500 rounded-full shadow-sm border border-white z-10 transform -translate-x-1/2 transition-all duration-500" style={{ left: `${leftPos}%` }}></div>
+            </div>
+            <div className="w-12 text-right font-bold text-blue-600 dark:text-blue-400 pl-2">{z.toFixed(2)}</div>
+        </div>
+    );
+};
+
+
 const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) => {
     const [view, setView] = useState<ViewMode>('list');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -149,64 +246,6 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
             setCurrentRecord(null);
             setPrevRecord(null);
         }
-    };
-
-    // --- CALCULATION HELPERS ---
-
-    const getMetricValue = (record: MeasurementRecord | null, sectionId: string, metricId: string): number => {
-        if (!record || !record.data) return 0;
-        // @ts-ignore
-        return record.data[sectionId]?.[metricId] || 0;
-    };
-
-    const calcDiff = (curr: number, prev: number) => curr - prev;
-    const calcPercent = (curr: number, prev: number) => prev === 0 ? 0 : ((curr - prev) / prev) * 100;
-
-    const getZScore = (val: number, metricId: string) => {
-        const ref = PHANTOM_REF[metricId];
-        if (!ref || val === 0) return 0;
-        return (val - ref.mean) / ref.sd;
-    };
-
-    const calcCorrectedGirth = (girthCm: number, skinfoldMm: number) => {
-        return girthCm - (Math.PI * (skinfoldMm / 10));
-    };
-
-    const calcFaulkner = (triceps: number, subscap: number, supra: number, abd: number) => {
-        const sum4 = triceps + subscap + supra + abd;
-        return (sum4 * 0.153) + 5.783;
-    };
-
-    const calcSomatotype = (data: AnthropometricData) => {
-        if (!data) return { endo: 0, meso: 0, ecto: 0, x: 0, y: 0 };
-
-        const { triceps, subscapular, supraspinale } = data.skinfolds;
-        const { humerus, femur } = data.breadths;
-        const { arm_flexed, calf_girth } = data.girths;
-        const { stature, mass } = data.basic;
-        const calf_skinfold = data.skinfolds.calf;
-
-        // Endomorphy
-        const sum3 = triceps + subscapular + supraspinale;
-        const endo = -0.7182 + (0.1451 * sum3) - (0.00068 * Math.pow(sum3, 2)) + (0.0000014 * Math.pow(sum3, 3));
-
-        // Mesomorphy
-        const arm_corr = arm_flexed - (triceps / 10);
-        const calf_corr = calf_girth - (calf_skinfold / 10);
-        const meso = (0.858 * humerus) + (0.601 * femur) + (0.188 * arm_corr) + (0.161 * calf_corr) - (0.131 * stature) + 4.5;
-
-        // Ectomorphy
-        const hwr = stature / Math.pow(mass, 0.3333);
-        let ecto = 0;
-        if (hwr >= 40.75) ecto = (0.732 * hwr) - 28.58;
-        else if (hwr >= 38.25) ecto = (0.463 * hwr) - 17.63;
-        else ecto = 0.1;
-
-        // Chart Coordinates
-        const x = ecto - endo;
-        const y = (2 * meso) - (ecto + endo);
-
-        return { endo, meso, ecto, x, y };
     };
 
     // --- DERIVED VALUES ---
@@ -309,16 +348,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
 
     // --- ISAK LOGIC HELPERS ---
 
-    // Define allowed difference (Threshold) per section type
-    const getAllowedDiff = (sectionId: string) => {
-        switch (sectionId) {
-            case 'skinfolds': return 1.0; // > 1mm
-            case 'breadths': return 0.2; // > 2mm (0.2cm)
-            case 'girths': return 0.5; // > 5mm (0.5cm)
-            case 'basic': return 0.5; // Default safe threshold for basics
-            default: return 9999;
-        }
-    };
+
 
     // Check if 3rd measurement is required based on v1 and v2 difference
     const needsThirdMeasure = (metricId: string, sectionId: string) => {
@@ -357,30 +387,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
 
     const validateAndSaveNew = () => { alert("Medición guardada correctamente."); handleBack(); };
 
-    const ZScoreRow = ({ label, value, metricId }: { label: string, value: number, metricId: string }) => {
-        const z = getZScore(value, metricId);
-        const clampedZ = Math.max(-3.5, Math.min(3.5, z));
-        const leftPos = ((clampedZ + 4) / 8) * 100;
-        return (
-            <div className="flex items-center text-xs py-1.5 border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5">
-                <div className="w-32 truncate font-medium text-text-dark dark:text-gray-300 pr-2" title={label}>{label}</div>
-                <div className="flex-1 relative h-6 flex items-center">
-                    <div className="absolute inset-0 flex justify-between px-[12.5%] text-[8px] text-gray-300">
-                        <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
-                        <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
-                        <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
-                        <div className="h-full w-0.5 bg-blue-300 dark:bg-blue-700"></div>
-                        <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
-                        <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
-                        <div className="h-full w-px bg-blue-100 dark:bg-blue-900/30"></div>
-                    </div>
-                    <div className="absolute w-full h-px bg-blue-200 dark:bg-blue-800"></div>
-                    <div className="absolute size-2.5 bg-blue-500 rounded-full shadow-sm border border-white z-10 transform -translate-x-1/2 transition-all duration-500" style={{ left: `${leftPos}%` }}></div>
-                </div>
-                <div className="w-12 text-right font-bold text-blue-600 dark:text-blue-400 pl-2">{z.toFixed(2)}</div>
-            </div>
-        );
-    };
+
 
     // 1. LIST VIEW
     if (view === 'list') {
