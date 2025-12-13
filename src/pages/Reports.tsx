@@ -332,9 +332,13 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
     };
 
     const filteredClients = useMemo(() => {
-        if (!searchTerm) return CLIENTS;
+        // Load clients from LocalStorage to include new creations, fallback to constant
+        const saved = localStorage.getItem('clients_data');
+        const sourceData = saved ? JSON.parse(saved) : CLIENTS;
+
+        if (!searchTerm) return sourceData;
         const lowerTerm = searchTerm.toLowerCase();
-        return CLIENTS.filter(c => c.name.toLowerCase().includes(lowerTerm) || c.id.toLowerCase().includes(lowerTerm));
+        return sourceData.filter((c: Client) => c.name.toLowerCase().includes(lowerTerm) || c.id.toLowerCase().includes(lowerTerm));
     }, [searchTerm]);
 
     const handleSelectClientForReport = (client: Client) => { setSelectedClient(client); loadClientData(client.id); setView('details'); };

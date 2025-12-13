@@ -2,16 +2,44 @@
 export interface Client {
   id: string;
   name: string;
-  email?: string; 
+  email?: string;
   image: string;
   age: number;
-  gender: 'Masculino' | 'Femenino';
+  gender: 'Masculino' | 'Femenino' | 'Otro';
   weight: number;
   weightDiff: number;
   lastVisit: string;
   status: 'Activo' | 'Inactivo' | 'Pendiente';
   goal: string;
   bodyFat: number;
+
+  // Extended Profile Fields
+  phone?: string;
+  address?: string;
+  birthDate?: string;
+
+  // Anthropometry
+  race?: string;
+  handDominance?: string;
+  footDominance?: string;
+  activityType?: string;
+  activityIntensity?: string;
+  activityFrequency?: string;
+  competitionLevel?: string;
+
+  // Sports
+  sports?: string[];
+  position?: string;
+
+  // Mass History
+  massMax?: number;
+  massMin?: number;
+
+  // Clinical
+  nutritionist?: string;
+  pathologies?: string;
+  surgeries?: string;
+  medication?: string;
 }
 
 export interface Appointment {

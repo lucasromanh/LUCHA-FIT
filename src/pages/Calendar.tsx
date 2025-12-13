@@ -41,6 +41,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
 
     // Date Management - Default to Today
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [showConfigModal, setShowConfigModal] = useState(false);
 
     // Calculate start of current week (Sunday)
     const currentWeekStart = useMemo(() => {
@@ -367,7 +368,94 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
     const monthDays = useMemo(() => getMonthDays(currentDate), [currentDate]);
 
     return (
-        <div className="flex-1 overflow-y-auto no-scrollbar p-0 h-full">
+        <div className="flex-1 overflow-y-auto no-scrollbar p-0 h-full relative">
+
+            {/* Configuration Modal */}
+            {showConfigModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white dark:bg-surface-dark rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-text-dark dark:text-white">Configuración de Calendario</h3>
+                            <button onClick={() => setShowConfigModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-6">
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-lg">schedule</span>
+                                    Horarios de Atención
+                                </h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs text-text-muted mb-1 block">Inicio</label>
+                                        <select className="w-full bg-background-light dark:bg-gray-800 border-none rounded-lg p-2 text-sm text-text-dark dark:text-white">
+                                            {Array.from({ length: 18 }).map((_, i) => {
+                                                const h = i + 6;
+                                                return <option key={h}>{h < 10 ? `0${h}` : h}:00 {h >= 12 ? 'PM' : 'AM'}</option>
+                                            })}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-text-muted mb-1 block">Fin</label>
+                                        <select className="w-full bg-background-light dark:bg-gray-800 border-none rounded-lg p-2 text-sm text-text-dark dark:text-white">
+                                            <option>08:00 PM</option>
+                                            <option>09:00 PM</option>
+                                            <option selected>10:00 PM</option>
+                                            <option>11:00 PM</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Colors Config (Mock) */}
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-lg">palette</span>
+                                    Colores de Eventos
+                                </h4>
+                                <div className="flex gap-3">
+                                    {['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500'].map((color, i) => (
+                                        <div key={i} className={`w-8 h-8 rounded-full ${color} cursor-pointer hover:scale-110 transition-transform ring-offset-2 ring-1 ring-transparent hover:ring-gray-300 dark:ring-offset-gray-800`}></div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Integrations (Mock) */}
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-lg">link</span>
+                                    Integraciones
+                                </h4>
+                                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-1.5 shadow-sm">
+                                            <svg viewBox="0 0 24 24" className="w-full h-full"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-text-dark dark:text-white">Google Calendar</p>
+                                            <p className="text-xs text-green-600 font-medium">Conectado</p>
+                                        </div>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 dark:peer-focus:ring-primary/80 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-end">
+                            <button
+                                onClick={() => setShowConfigModal(false)}
+                                className="px-6 py-2 bg-text-dark text-white rounded-lg hover:bg-black transition-all font-bold text-sm shadow-lg shadow-black/20"
+                            >
+                                Guardar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-[1400px] mx-auto flex flex-col xl:flex-row gap-6 h-full">
                 {/* Left Column: Mini Calendar & Filters */}
                 <div className="w-full xl:w-80 flex-shrink-0 flex flex-col gap-6">
@@ -542,7 +630,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                                 <span className="material-symbols-outlined text-lg">print</span>
                                 Imprimir
                             </button>
-                            <button onClick={() => alert("Configuración de calendario:\n- Definir horarios hábiles\n- Colores de eventos\n- Integraciones")} className="flex items-center gap-2 px-4 py-2 bg-text-dark text-white text-sm font-bold rounded-lg hover:bg-text-dark/90 transition-colors">
+                            <button onClick={() => setShowConfigModal(true)} className="flex items-center gap-2 px-4 py-2 bg-text-dark text-white text-sm font-bold rounded-lg hover:bg-text-dark/90 transition-colors">
                                 <span className="material-symbols-outlined text-lg">tune</span>
                                 Configurar
                             </button>
@@ -598,7 +686,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                         )}
 
                         {/* Scrollable Content Area */}
-                        <div className="flex flex-1 relative min-w-[760px] h-full">
+                        <div className="flex flex-1 relative min-w-[760px] pb-10">
 
                             {/* --- WEEK & DAY VIEW CONTENT --- */}
                             {(viewMode === 'week' || viewMode === 'day') && (
@@ -618,10 +706,10 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
 
                                     {/* Grid Container */}
                                     <div className={`flex-1 grid relative ${viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-1'}`}>
-                                        {/* Background Grid Lines */}
-                                        <div className="absolute inset-0 flex flex-col pointer-events-none">
+                                        {/* Background Grid Lines - Static and col-span-full to force correct height & width */}
+                                        <div className="col-span-full flex flex-col pointer-events-none z-0">
                                             {Array.from({ length: 17 }).map((_, i) => (
-                                                <div key={i} className="h-20 border-b border-input-border dark:border-gray-700 border-dashed"></div>
+                                                <div key={i} className="h-20 border-b border-input-border dark:border-gray-700 border-dashed w-full"></div>
                                             ))}
                                         </div>
                                         <div className={`absolute inset-0 grid pointer-events-none ${viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-1'}`}>
@@ -667,8 +755,11 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                                                                         top: `${((new Date().getHours() * 60 + new Date().getMinutes()) - (6 * 60)) * (80 / 60)}px`
                                                                     }}
                                                                 >
-                                                                    <div className="w-2.5 h-2.5 bg-red-500 rounded-full shadow-md"></div>
-                                                                    <div className="h-0.5 w-full bg-red-500"></div>
+                                                                    <div className="w-2.5 h-2.5 bg-red-500 rounded-full shadow-md z-20"></div>
+                                                                    <div className="h-0.5 w-full bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.6)]"></div>
+                                                                    <span className="absolute left-3 -top-5 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold shadow-sm z-30">
+                                                                        Hora Actual
+                                                                    </span>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -682,14 +773,14 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
 
                             {/* --- MONTH VIEW CONTENT --- */}
                             {viewMode === 'month' && (
-                                <div className="flex-1 grid grid-cols-7 grid-rows-5 h-full min-h-[600px] w-full bg-input-border/20 dark:bg-gray-800 gap-px border border-input-border dark:border-gray-700">
+                                <div className="flex-1 grid grid-cols-7 grid-rows-5 h-full min-h-[600px] w-full bg-input-border/20 dark:bg-gray-800 gap-0 border-t border-l border-input-border dark:border-gray-700">
                                     {monthDays.map((d, i) => {
                                         const isCurrentMonth = d.getMonth() === currentDate.getMonth();
                                         const isToday = isSameDay(d, new Date());
                                         const dayEvents = events.filter(e => isSameDay(e.start, d));
 
                                         return (
-                                            <div key={i} className={`bg-background-light dark:bg-surface-dark p-2 flex flex-col gap-1 min-h-[100px] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${!isCurrentMonth ? 'opacity-40 bg-gray-50 dark:bg-black/20' : ''}`}>
+                                            <div key={i} className={`bg-background-light dark:bg-surface-dark p-2 flex flex-col gap-1 min-h-[100px] border-r border-b border-input-border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${!isCurrentMonth ? 'opacity-40 bg-gray-50 dark:bg-black/20' : ''}`}>
                                                 <div className="flex justify-between items-start">
                                                     <span className={`text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-primary text-text-dark' : 'text-text-dark dark:text-white'}`}>
                                                         {d.getDate()}
