@@ -10,7 +10,6 @@ const Routines: React.FC = () => {
   
   // Selected Context
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
   
   // Data State (In a real app, this would come from an API)
   const [routines, setRoutines] = useState<Record<string, Routine[]>>(MOCK_ROUTINES);
@@ -45,9 +44,9 @@ const Routines: React.FC = () => {
           objective: '',
           sport: '',
           level: 'Intermedio',
-          frequency: '3 días',
+          frequency: '3 días/semana',
           status: 'draft',
-          createdAt: new Date().toISOString().split('T')[0],
+          createdAt: new Date().toLocaleDateString('es-ES'),
           sessions: [
               {
                   id: `s-${Date.now()}-1`,
@@ -72,19 +71,19 @@ const Routines: React.FC = () => {
           id: `r-${Date.now()}`,
           title: `${routine.title} (Copia)`,
           status: 'draft',
-          createdAt: new Date().toISOString().split('T')[0]
+          createdAt: new Date().toLocaleDateString('es-ES')
       };
-      // In a real app, API call here
+      
       if (selectedClient) {
           setRoutines(prev => ({
               ...prev,
-              [selectedClient.id]: [...(prev[selectedClient.id] || []), copy]
+              [selectedClient.id]: [copy, ...(prev[selectedClient.id] || [])]
           }));
       }
   };
 
   const handleDeleteRoutine = (routineId: string) => {
-      if (selectedClient && window.confirm('¿Seguro que deseas eliminar esta rutina?')) {
+      if (selectedClient && window.confirm('⚠ ¿Estás seguro de que deseas ELIMINAR permanentemente esta rutina?\n\nEsta acción no se puede deshacer.')) {
           setRoutines(prev => ({
               ...prev,
               [selectedClient.id]: prev[selectedClient.id].filter(r => r.id !== routineId)
@@ -92,36 +91,74 @@ const Routines: React.FC = () => {
       }
   };
 
-  // --- REAL EXPORT LOGIC ---
+  // --- EXPORT LOGIC (EXCEL FORMATTED & PDF) ---
   
-  // Helper: Generate CSV Content
-  const generateCSV = (routine: Routine, clientName: string) => {
-      let csvContent = `\uFEFFPlan de Entrenamiento,${routine.title}\n`;
-      csvContent += `Paciente,${clientName}\n`;
-      csvContent += `Profesional,${PROFESSIONAL_PROFILE.display}\n`;
-      csvContent += `Objetivo,${routine.objective}\n`;
-      csvContent += `Frecuencia,${routine.frequency}\n`;
-      csvContent += `Nivel,${routine.level}\n\n`;
-
-      routine.sessions.forEach(session => {
-          csvContent += `--- ${session.label} ---\n`;
-          csvContent += `Bloque,Ejercicio,Series,Reps,Carga,Descanso,Notas\n`;
-          
-          session.exercises.forEach(ex => {
-              // Handle commas in text fields by wrapping in quotes
-              const safeName = `"${ex.name.replace(/"/g, '""')}"`;
-              const safeNotes = `"${(ex.notes || '').replace(/"/g, '""')}"`;
-              csvContent += `${ex.block.toUpperCase()},${safeName},${ex.sets},${ex.reps},${ex.load},${ex.rest},${safeNotes}\n`;
-          });
-          csvContent += `\n`;
-      });
-
-      return csvContent;
+  // Helper: Generate HTML Table compatible with Excel (.xls)
+  // This allows us to use styles (colors, borders) unlike CSV.
+  const generateXLSContent = (routine: Routine, clientName: string) => {
+      return `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                table { border-collapse: collapse; width: 100%; }
+                td, th { border: 1px solid #000000; padding: 5px; vertical-align: top; }
+                .header-label { background-color: #E7F3EB; font-weight: bold; width: 150px; }
+                .header-value { font-weight: bold; }
+                .session-header { background-color: #0D1B12; color: #FFFFFF; font-weight: bold; font-size: 14px; text-align: left; }
+                .col-header { background-color: #13EC5B; color: #000000; font-weight: bold; text-align: center; }
+                .block-warmup { color: #D97706; font-weight: bold; }
+                .block-main { color: #13EC5B; font-weight: bold; }
+                .block-accessory { color: #3B82F6; font-weight: bold; }
+                .center { text-align: center; }
+            </style>
+        </head>
+        <body>
+            <table>
+                <tr><td colspan="2" style="font-size: 16px; font-weight: bold; background-color: #13EC5B;">LUCHA-FIT | Plan de Entrenamiento</td></tr>
+                <tr><td class="header-label">Paciente</td><td class="header-value">${clientName}</td></tr>
+                <tr><td class="header-label">Profesional</td><td class="header-value">${PROFESSIONAL_PROFILE.display}</td></tr>
+                <tr><td class="header-label">Rutina</td><td class="header-value">${routine.title}</td></tr>
+                <tr><td class="header-label">Objetivo</td><td class="header-value">${routine.objective}</td></tr>
+                <tr><td class="header-label">Frecuencia</td><td class="header-value">${routine.frequency}</td></tr>
+                <tr><td class="header-label">Nivel</td><td class="header-value">${routine.level}</td></tr>
+                <tr><td class="header-label">Fecha Creación</td><td class="header-value">${routine.createdAt}</td></tr>
+            </table>
+            <br/>
+            ${routine.sessions.map(session => `
+                <table>
+                    <tr><td colspan="7" class="session-header">--- ${session.label} ---</td></tr>
+                    <tr>
+                        <th class="col-header">Bloque</th>
+                        <th class="col-header">Ejercicio</th>
+                        <th class="col-header">Series</th>
+                        <th class="col-header">Reps</th>
+                        <th class="col-header">Carga</th>
+                        <th class="col-header">Descanso</th>
+                        <th class="col-header">Notas</th>
+                    </tr>
+                    ${session.exercises.map(ex => `
+                        <tr>
+                            <td class="${ex.block === 'warmup' ? 'block-warmup' : ex.block === 'main' ? 'block-main' : 'block-accessory'}">${ex.block.toUpperCase()}</td>
+                            <td>${ex.name}</td>
+                            <td class="center">${ex.sets}</td>
+                            <td class="center">${ex.reps}</td>
+                            <td class="center">${ex.load}</td>
+                            <td class="center">${ex.rest}</td>
+                            <td>${ex.notes || ''}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+                <br/>
+            `).join('')}
+        </body>
+        </html>
+      `;
   };
 
-  // Helper: Open Print Window for PDF
   const openPrintWindow = (routine: Routine, clientName: string) => {
-      const printWindow = window.open('', '_blank', 'width=800,height=600');
+      const printWindow = window.open('', '_blank', 'width=900,height=800');
       if (!printWindow) {
           alert("Por favor habilita las ventanas emergentes para generar el PDF.");
           return;
@@ -132,63 +169,71 @@ const Routines: React.FC = () => {
         <head>
             <title>Rutina - ${clientName}</title>
             <style>
-                body { font-family: 'Arial', sans-serif; line-height: 1.5; color: #333; padding: 20px; }
-                .header { border-bottom: 2px solid #13ec5b; padding-bottom: 20px; margin-bottom: 30px; }
-                .header h1 { margin: 0; color: #0d1b12; }
-                .header p { margin: 5px 0; color: #666; }
-                .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 30px; background: #f9f9f9; padding: 15px; border-radius: 8px; }
-                .session { margin-bottom: 40px; page-break-inside: avoid; }
-                .session-title { background: #0d1b12; color: white; padding: 8px 15px; border-radius: 4px; margin-bottom: 15px; font-size: 18px; font-weight: bold; }
+                body { font-family: 'Arial', sans-serif; line-height: 1.4; color: #333; padding: 30px; }
+                .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 3px solid #13ec5b; padding-bottom: 15px; }
+                .logo { background-color: #13ec5b; color: black; font-weight: bold; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+                .meta-container { background-color: #f5f5f5; border-radius: 8px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; font-size: 14px; }
+                .meta-item strong { display: block; color: #555; font-size: 11px; text-transform: uppercase; margin-bottom: 2px; }
+                .session { margin-bottom: 30px; page-break-inside: avoid; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+                .session-header { background-color: #0d1b12; color: white; padding: 10px 15px; font-weight: bold; font-size: 16px; }
                 table { width: 100%; border-collapse: collapse; font-size: 12px; }
-                th { text-align: left; border-bottom: 2px solid #ddd; padding: 8px; background: #f0f0f0; }
-                td { border-bottom: 1px solid #eee; padding: 8px; }
-                .block-warmup { color: #d97706; font-weight: bold; }
-                .block-main { color: #13ec5b; font-weight: bold; }
-                .block-accessory { color: #3b82f6; font-weight: bold; }
-                .block-cooldown { color: #6b7280; font-weight: bold; }
-                .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+                th { text-align: left; padding: 10px; background-color: #e7f3eb; color: #0d1b12; font-weight: bold; border-bottom: 2px solid #ddd; }
+                td { padding: 10px; border-bottom: 1px solid #eee; }
+                tr:last-child td { border-bottom: none; }
+                .badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+                .badge-warmup { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
+                .badge-main { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
+                .badge-accessory { background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }
+                .badge-cooldown { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+                @media print {
+                    body { -webkit-print-color-adjust: exact; }
+                    .session { page-break-inside: avoid; }
+                }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1>${PROFESSIONAL_PROFILE.name}</h1>
-                <p>ISAK Nivel ${PROFESSIONAL_PROFILE.isak_level} | Entrenador Personal</p>
+            <div class="brand">
+                <div class="logo">LF</div>
+                <div>
+                    <h1 style="margin:0; font-size: 24px;">${PROFESSIONAL_PROFILE.name}</h1>
+                    <p style="margin:0; font-size: 12px; color: #666;">ISAK Nivel ${PROFESSIONAL_PROFILE.isak_level} | Entrenador Personal</p>
+                </div>
             </div>
             
-            <div class="meta-grid">
-                <div><strong>Paciente:</strong> ${clientName}</div>
-                <div><strong>Rutina:</strong> ${routine.title}</div>
-                <div><strong>Objetivo:</strong> ${routine.objective}</div>
-                <div><strong>Frecuencia:</strong> ${routine.frequency}</div>
-                <div><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</div>
-                <div><strong>Nivel:</strong> ${routine.level}</div>
+            <div class="meta-container">
+                <div class="meta-item"><strong>Paciente</strong>${clientName}</div>
+                <div class="meta-item"><strong>Plan de Entrenamiento</strong>${routine.title}</div>
+                <div class="meta-item"><strong>Objetivo</strong>${routine.objective}</div>
+                <div class="meta-item"><strong>Frecuencia</strong>${routine.frequency}</div>
+                <div class="meta-item"><strong>Nivel</strong>${routine.level}</div>
+                <div class="meta-item"><strong>Fecha Emisión</strong>${routine.createdAt}</div>
             </div>
 
             ${routine.sessions.map(session => `
                 <div class="session">
-                    <div class="session-title">${session.label}</div>
+                    <div class="session-header">${session.label}</div>
                     <table>
                         <thead>
                             <tr>
-                                <th width="10%">Bloque</th>
-                                <th width="30%">Ejercicio</th>
-                                <th width="10%">Series</th>
-                                <th width="10%">Reps</th>
+                                <th width="10%">Tipo</th>
+                                <th width="25%">Ejercicio</th>
+                                <th width="8%">Series</th>
+                                <th width="12%">Reps</th>
                                 <th width="15%">Carga</th>
                                 <th width="10%">Pausa</th>
-                                <th width="15%">Notas</th>
+                                <th width="20%">Notas</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${session.exercises.map(ex => `
                                 <tr>
-                                    <td class="block-${ex.block}">${ex.block === 'warmup' ? 'Calent.' : ex.block === 'main' ? 'Principal' : ex.block === 'accessory' ? 'Acc.' : 'Final'}</td>
+                                    <td><span class="badge badge-${ex.block}">${ex.block === 'warmup' ? 'Calent.' : ex.block === 'main' ? 'Principal' : ex.block === 'accessory' ? 'Acc.' : 'Final'}</span></td>
                                     <td><strong>${ex.name}</strong></td>
                                     <td>${ex.sets}</td>
                                     <td>${ex.reps}</td>
                                     <td>${ex.load}</td>
                                     <td>${ex.rest}</td>
-                                    <td>${ex.notes || '-'}</td>
+                                    <td style="color:#666;">${ex.notes || '-'}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -196,8 +241,8 @@ const Routines: React.FC = () => {
                 </div>
             `).join('')}
 
-            <div class="footer">
-                Generado por LUCHA-FIT Professional Dashboard
+            <div style="margin-top: 40px; text-align: center; font-size: 10px; color: #999;">
+                Documento generado automáticamente por la plataforma LUCHA-FIT
             </div>
             <script>
                 window.onload = function() { window.print(); }
@@ -210,22 +255,21 @@ const Routines: React.FC = () => {
       printWindow.document.close();
   };
 
-  const downloadMockFile = (routine: Routine, type: 'pdf' | 'xlsx') => {
+  const downloadFile = (routine: Routine, type: 'pdf' | 'xls') => {
       if (!selectedClient) return;
       
       const fileName = `Rutina_${selectedClient.name.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}`;
 
       if (type === 'pdf') {
-          // Open formatted print window
           openPrintWindow(routine, selectedClient.name);
       } else {
-          // Generate Real CSV File
-          const csvString = generateCSV(routine, selectedClient.name);
-          const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+          // Generate "Excel" file using HTML hack for formatting
+          const xlsContent = generateXLSContent(routine, selectedClient.name);
+          const blob = new Blob([xlsContent], { type: 'application/vnd.ms-excel' });
           const link = document.createElement("a");
           const url = URL.createObjectURL(blob);
           link.setAttribute("href", url);
-          link.setAttribute("download", `${fileName}.csv`);
+          link.setAttribute("download", `${fileName}.xls`); // .xls extension triggers Excel to open HTML tables
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -250,7 +294,6 @@ const Routines: React.FC = () => {
       }
   };
 
-  // Editor Actions
   const addSession = () => {
       if (!editorData) return;
       const newSession: RoutineSession = {
@@ -409,8 +452,8 @@ const Routines: React.FC = () => {
                           <p className="text-text-muted dark:text-gray-400 text-sm">Historial de Planes de Entrenamiento</p>
                       </div>
                   </div>
-                  <button onClick={handleCreateRoutine} className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-black font-bold px-6 py-3 rounded-lg shadow-lg shadow-primary/20 transition-all">
-                      <span className="material-symbols-outlined">add</span> Crear Rutina
+                  <button onClick={handleCreateRoutine} className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-black font-bold px-6 py-3 rounded-lg shadow-lg shadow-primary/20 transition-all transform hover:-translate-y-0.5">
+                      <span className="material-symbols-outlined">add</span> Nueva Rutina
                   </button>
               </div>
 
@@ -418,7 +461,7 @@ const Routines: React.FC = () => {
               <div className="grid grid-cols-1 gap-4">
                   {clientRoutines.length > 0 ? (
                       clientRoutines.map(routine => (
-                          <div key={routine.id} className="bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl p-6 shadow-sm hover:border-primary dark:hover:border-primary transition-colors flex flex-col md:flex-row justify-between gap-6">
+                          <div key={routine.id} className="bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl p-6 shadow-sm hover:border-primary dark:hover:border-primary transition-colors flex flex-col md:flex-row justify-between gap-6 relative group">
                               <div className="flex-1">
                                   <div className="flex items-center gap-3 mb-2">
                                       <h3 className="text-xl font-bold text-text-dark dark:text-white">{routine.title}</h3>
@@ -431,20 +474,30 @@ const Routines: React.FC = () => {
                                       <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">update</span> {routine.createdAt}</span>
                                   </div>
                               </div>
-                              <div className="flex items-center gap-2 self-end md:self-center">
-                                  <button onClick={() => downloadMockFile(routine, 'pdf')} className="p-2 text-gray-500 hover:text-red-600 transition-colors" title="Descargar PDF (Imprimir)"><span className="material-symbols-outlined">picture_as_pdf</span></button>
-                                  <button onClick={() => downloadMockFile(routine, 'xlsx')} className="p-2 text-gray-500 hover:text-green-600 transition-colors" title="Descargar CSV/Excel"><span className="material-symbols-outlined">table_view</span></button>
-                                  <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
-                                  <button onClick={() => handleDuplicateRoutine(routine)} className="p-2 text-gray-500 hover:text-primary transition-colors" title="Duplicar"><span className="material-symbols-outlined">content_copy</span></button>
-                                  <button onClick={() => handleEditRoutine(routine)} className="p-2 text-gray-500 hover:text-blue-500 transition-colors" title="Editar"><span className="material-symbols-outlined">edit</span></button>
-                                  <button onClick={() => handleDeleteRoutine(routine.id)} className="p-2 text-gray-500 hover:text-red-500 transition-colors" title="Archivar"><span className="material-symbols-outlined">archive</span></button>
+                              <div className="flex flex-wrap items-center gap-2 self-end md:self-center">
+                                  <button onClick={() => downloadFile(routine, 'pdf')} className="flex items-center gap-1 px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-xs font-bold text-gray-600 dark:text-gray-300 transition-colors" title="Ver/Imprimir PDF">
+                                      <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span> PDF
+                                  </button>
+                                  <button onClick={() => downloadFile(routine, 'xls')} className="flex items-center gap-1 px-3 py-1.5 rounded bg-green-50 dark:bg-green-900/20 hover:bg-green-100 text-xs font-bold text-green-700 dark:text-green-400 transition-colors" title="Descargar Excel con formato">
+                                      <span className="material-symbols-outlined text-[16px]">table_view</span> Excel
+                                  </button>
+                                  <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+                                  <button onClick={() => handleDuplicateRoutine(routine)} className="p-2 text-gray-500 hover:text-primary transition-colors" title="Duplicar Rutina"><span className="material-symbols-outlined">content_copy</span></button>
+                                  <button onClick={() => handleEditRoutine(routine)} className="p-2 text-gray-500 hover:text-blue-500 transition-colors" title="Editar Rutina"><span className="material-symbols-outlined">edit</span></button>
+                                  <button onClick={() => handleDeleteRoutine(routine.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors" title="Eliminar Rutina">
+                                      <span className="material-symbols-outlined filled-icon">delete</span>
+                                  </button>
                               </div>
                           </div>
                       ))
                   ) : (
-                      <div className="text-center py-20 text-gray-400 bg-gray-50 dark:bg-white/5 rounded-xl border-dashed border-2 border-gray-200 dark:border-gray-700">
-                          <span className="material-symbols-outlined text-4xl mb-2">fitness_center</span>
-                          <p>No hay rutinas creadas para este paciente.</p>
+                      <div className="text-center py-20 text-gray-400 bg-gray-50 dark:bg-white/5 rounded-xl border-dashed border-2 border-gray-200 dark:border-gray-700 flex flex-col items-center">
+                          <span className="material-symbols-outlined text-4xl mb-4 opacity-50">fitness_center</span>
+                          <p className="text-lg font-medium mb-2">No hay rutinas creadas para este paciente.</p>
+                          <p className="text-sm text-gray-500 mb-6">Comienza creando un nuevo plan de entrenamiento personalizado.</p>
+                          <button onClick={handleCreateRoutine} className="bg-primary text-black font-bold px-6 py-3 rounded-lg shadow-lg hover:brightness-105 transition-all">
+                              Crear Primera Rutina
+                          </button>
                       </div>
                   )}
               </div>
@@ -462,8 +515,23 @@ const Routines: React.FC = () => {
                       <h2 className="text-xl font-bold text-text-dark dark:text-white">Editor de Rutina</h2>
                   </div>
                   <div className="flex gap-3">
-                      <button onClick={() => setView('client_details')} className="px-4 py-2 border border-input-border dark:border-gray-600 rounded-lg font-bold text-sm">Cancelar</button>
-                      <button onClick={handleSaveRoutine} className="px-6 py-2 bg-primary text-black rounded-lg font-bold text-sm hover:brightness-105 shadow-md">Guardar Rutina</button>
+                      {/* Delete button inside editor */}
+                      <button 
+                        onClick={() => {
+                            if(editorData.id.startsWith('r-') && !editorData.id.includes('Date')) {
+                                handleDeleteRoutine(editorData.id);
+                                setView('client_details');
+                            } else {
+                                setView('client_details'); // Just cancel if it's new
+                            }
+                        }}
+                        className="px-4 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg font-bold text-sm transition-colors"
+                      >
+                          Eliminar
+                      </button>
+                      <button onClick={handleSaveRoutine} className="px-6 py-2 bg-primary text-black rounded-lg font-bold text-sm hover:brightness-105 shadow-md flex items-center gap-2">
+                          <span className="material-symbols-outlined text-lg">save</span> Guardar
+                      </button>
                   </div>
               </div>
 
