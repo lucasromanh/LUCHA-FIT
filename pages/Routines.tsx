@@ -93,8 +93,6 @@ const Routines: React.FC = () => {
 
   // --- EXPORT LOGIC (EXCEL FORMATTED & PDF) ---
   
-  // Helper: Generate HTML Table compatible with Excel (.xls)
-  // This allows us to use styles (colors, borders) unlike CSV.
   const generateXLSContent = (routine: Routine, clientName: string) => {
       return `
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
@@ -263,13 +261,12 @@ const Routines: React.FC = () => {
       if (type === 'pdf') {
           openPrintWindow(routine, selectedClient.name);
       } else {
-          // Generate "Excel" file using HTML hack for formatting
           const xlsContent = generateXLSContent(routine, selectedClient.name);
           const blob = new Blob([xlsContent], { type: 'application/vnd.ms-excel' });
           const link = document.createElement("a");
           const url = URL.createObjectURL(blob);
           link.setAttribute("href", url);
-          link.setAttribute("download", `${fileName}.xls`); // .xls extension triggers Excel to open HTML tables
+          link.setAttribute("download", `${fileName}.xls`);
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -284,7 +281,7 @@ const Routines: React.FC = () => {
               const index = existing.findIndex(r => r.id === editorData.id);
               if (index >= 0) {
                   const updated = [...existing];
-                  updated[index] = { ...editorData, status: 'active' }; // Auto activate on save for demo
+                  updated[index] = { ...editorData, status: 'active' }; 
                   return { ...prev, [selectedClient.id]: updated };
               } else {
                   return { ...prev, [selectedClient.id]: [editorData, ...existing] };
@@ -412,7 +409,7 @@ const Routines: React.FC = () => {
               </div>
               <div className="relative group">
                   <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">search</span>
-                  <input type="text" placeholder="Buscar atleta..." className="w-full pl-12 pr-4 h-14 bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl text-text-dark dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  <input type="text" placeholder="Buscar paciente..." className="w-full pl-12 pr-4 h-14 bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl text-text-dark dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredClients.map(client => (

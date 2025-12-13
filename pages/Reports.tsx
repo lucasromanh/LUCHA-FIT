@@ -345,11 +345,11 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
       <div className="flex flex-col gap-8 animate-in fade-in duration-300">
         <div className="flex flex-col gap-2">
             <h1 className="text-3xl font-black text-text-dark dark:text-white tracking-tight">Mediciones y Seguimiento</h1>
-            <p className="text-text-muted dark:text-gray-400">Selecciona un atleta para registrar una nueva medición o ver su evolución histórica.</p>
+            <p className="text-text-muted dark:text-gray-400">Selecciona un paciente para registrar una nueva medición o ver su evolución histórica.</p>
         </div>
         <div className="relative group">
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">search</span>
-            <input type="text" placeholder="Buscar atleta por nombre o ID..." className="w-full pl-12 pr-4 h-14 bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl text-text-dark dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" placeholder="Buscar paciente por nombre o ID..." className="w-full pl-12 pr-4 h-14 bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl text-text-dark dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredClients.map(client => (
@@ -387,7 +387,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                     <button onClick={handleBack} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><span className="material-symbols-outlined">arrow_back</span></button>
                     <div>
                         <h1 className="text-2xl font-black text-text-dark dark:text-white">Protocolo Antropométrico</h1>
-                        <div className="flex items-center gap-2 text-sm text-text-muted"><span>Atleta:</span><span className="font-bold text-text-dark dark:text-white">{selectedClient.name}</span></div>
+                        <div className="flex items-center gap-2 text-sm text-text-muted"><span>Paciente:</span><span className="font-bold text-text-dark dark:text-white">{selectedClient.name}</span></div>
                     </div>
                 </div>
             </div>
