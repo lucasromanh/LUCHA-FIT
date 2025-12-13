@@ -1,18 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Appointment } from '../types';
+import { CLIENTS } from '../constants';
 
 interface DashboardProps {
     onNavigate: (page: string) => void;
-    appointments?: Appointment[]; // Received from App state
+    appointments?: Appointment[];
     onConfirmBooking?: (id: string) => void;
+    onRescheduleBooking?: (id: string, date: string, time: string) => void;
+    onGoToReports?: (clientName: string, mode: 'new' | 'details') => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigate, appointments = [], onConfirmBooking }) => {
+const Dashboard: React.FC<DashboardProps> = ({ 
+    onNavigate, 
+    appointments = [], 
+    onConfirmBooking,
+    onRescheduleBooking,
+    onGoToReports
+}) => {
   const [notification, setNotification] = useState<{show: boolean, message: string, subtext: string} | null>(null);
   
+  // Reschedule Modal State
+  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
+  const [selectedAptId, setSelectedAptId] = useState<string | null>(null);
+  const [rescheduleData, setRescheduleData] = useState({ date: '', time: '' });
+
+  // Carousel State for "In Progress" card
+  const [currentPatientIndex, setCurrentPatientIndex] = useState(0);
+
   // Separate appointments by status
   const pendingApprovals = appointments.filter(a => a.status === 'pending_approval');
+  // Sort upcoming by some logic (here just by existing order)
   const upcomingAppointments = appointments.filter(a => a.status === 'pending');
+
+  // --- LOGIC: NEXT PATIENT CARD ---
+  const activePatientApt = upcomingAppointments[currentPatientIndex] || null;
+  // Find Client Data matching the appointment
+  const activePatientData = activePatientApt 
+      ? CLIENTS.find(c => c.name.toLowerCase() === activePatientApt.clientName.toLowerCase()) 
+      : null;
+
+  const nextPatient = () => {
+      if (currentPatientIndex < upcomingAppointments.length - 1) {
+          setCurrentPatientIndex(prev => prev + 1);
+      } else {
+          setCurrentPatientIndex(0); // Loop back
+      }
+  };
+
+  const prevPatient = () => {
+      if (currentPatientIndex > 0) {
+          setCurrentPatientIndex(prev => prev - 1);
+      } else {
+          setCurrentPatientIndex(upcomingAppointments.length - 1); // Loop to end
+      }
+  };
+
 
   const handleConfirm = (apt: Appointment) => {
       if(onConfirmBooking) {
@@ -29,10 +71,41 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, appointments = [], on
               subtext: `Se ha enviado un email de confirmación a ${apt.email || 'su correo'}.`
           });
 
-          // Hide after 4 seconds
           setTimeout(() => {
               setNotification(null);
           }, 4000);
+      }
+  };
+
+  const openRescheduleModal = (id: string) => {
+      setSelectedAptId(id);
+      setIsRescheduleOpen(true);
+      setRescheduleData({ date: '', time: '' });
+  };
+
+  const submitReschedule = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (onRescheduleBooking && selectedAptId && rescheduleData.date && rescheduleData.time) {
+          onRescheduleBooking(selectedAptId, rescheduleData.date, rescheduleData.time);
+          setIsRescheduleOpen(false);
+          setNotification({
+              show: true,
+              message: `Turno reprogramado`,
+              subtext: `Nueva fecha: ${rescheduleData.date} a las ${rescheduleData.time}`
+          });
+          setTimeout(() => setNotification(null), 3000);
+      }
+  };
+
+  const handleStartMeasurement = (clientName: string) => {
+      if (onGoToReports) {
+          onGoToReports(clientName, 'new');
+      }
+  };
+
+  const handleViewProfile = (clientName: string) => {
+      if (onGoToReports) {
+          onGoToReports(clientName, 'details');
       }
   };
 
@@ -57,6 +130,45 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, appointments = [], on
           </div>
       )}
 
+      {/* Reschedule Modal */}
+      {isRescheduleOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <div className="bg-white dark:bg-surface-dark rounded-xl shadow-2xl w-full max-w-sm p-6 border border-input-border dark:border-gray-700 animate-in zoom-in-95">
+                  <h3 className="text-lg font-bold text-text-dark dark:text-white mb-4">Reprogramar Turno</h3>
+                  <form onSubmit={submitReschedule} className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-1">
+                          <label className="text-xs font-bold uppercase text-text-muted">Nueva Fecha</label>
+                          <input 
+                            type="date" 
+                            required 
+                            className="input-field"
+                            value={rescheduleData.date}
+                            onChange={(e) => setRescheduleData({...rescheduleData, date: e.target.value})}
+                          />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                          <label className="text-xs font-bold uppercase text-text-muted">Nueva Hora</label>
+                          <select 
+                             required
+                             className="input-field"
+                             value={rescheduleData.time}
+                             onChange={(e) => setRescheduleData({...rescheduleData, time: e.target.value})}
+                          >
+                              <option value="">Seleccionar...</option>
+                              {['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'].map(t => (
+                                  <option key={t} value={t}>{t}</option>
+                              ))}
+                          </select>
+                      </div>
+                      <div className="flex gap-3 mt-2">
+                          <button type="button" onClick={() => setIsRescheduleOpen(false)} className="flex-1 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-bold">Cancelar</button>
+                          <button type="submit" className="flex-1 py-2 rounded-lg bg-primary text-black text-sm font-bold hover:bg-primary-dark">Guardar</button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      )}
+
       {/* Page Heading */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -71,7 +183,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, appointments = [], on
 
       {/* Stats Grid */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Stat Card 1 */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-6 border border-input-border dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <span className="material-symbols-outlined text-6xl text-primary">group</span>
@@ -83,7 +194,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, appointments = [], on
           </div>
         </div>
         
-        {/* Stat Card 2 */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-6 border border-input-border dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <span className="material-symbols-outlined text-6xl text-primary">show_chart</span>
@@ -95,7 +205,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, appointments = [], on
           </div>
         </div>
         
-        {/* Stat Card 3 */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-6 border border-input-border dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <span className="material-symbols-outlined text-6xl text-primary">event_available</span>
@@ -217,8 +326,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, appointments = [], on
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-input-border dark:border-gray-600 text-text-dark dark:text-white text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700">Reprogramar</button>
-                      <button className="flex-1 sm:flex-none px-4 py-2 rounded-lg bg-primary text-text-dark text-sm font-bold hover:bg-primary-dark hover:text-white transition-colors">Iniciar</button>
+                      <button 
+                        onClick={() => openRescheduleModal(apt.id)}
+                        className="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-input-border dark:border-gray-600 text-text-dark dark:text-white text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                          Reprogramar
+                      </button>
+                      <button 
+                        onClick={() => handleStartMeasurement(apt.clientName)}
+                        className="flex-1 sm:flex-none px-4 py-2 rounded-lg bg-primary text-text-dark text-sm font-bold hover:bg-primary-dark hover:text-white transition-colors"
+                      >
+                          Iniciar
+                      </button>
                     </div>
                   </div>
                 )) : (
@@ -233,36 +352,64 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, appointments = [], on
 
         {/* Right Column: Recent Activity / Notifications */}
         <div className="flex flex-col gap-6">
-          {/* Mini Profile Card for Next Patient */}
-          <div className="bg-gradient-to-br from-primary/10 to-transparent dark:from-primary/5 rounded-xl p-6 border border-primary/20">
-            <div className="flex justify-between items-start mb-4">
-              <span className="bg-primary text-black text-xs font-bold px-2 py-1 rounded">EN PROCESO</span>
-              <button className="text-text-muted hover:text-text-dark">
-                <span className="material-symbols-outlined">more_horiz</span>
+          {/* Dynamic Next Patient Card */}
+          {activePatientApt ? (
+            <div className="bg-gradient-to-br from-primary/10 to-transparent dark:from-primary/5 rounded-xl p-6 border border-primary/20 relative">
+              <div className="flex justify-between items-start mb-4">
+                <span className="bg-primary text-black text-xs font-bold px-2 py-1 rounded">EN PROCESO</span>
+                <div className="flex gap-1">
+                    <button onClick={prevPatient} className="size-6 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-text-dark dark:text-white">
+                        <span className="material-symbols-outlined text-xs">chevron_left</span>
+                    </button>
+                     <button onClick={nextPatient} className="size-6 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-text-dark dark:text-white">
+                        <span className="material-symbols-outlined text-xs">chevron_right</span>
+                    </button>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-center text-center mb-6">
+                <div 
+                  className="w-20 h-20 rounded-full bg-cover bg-center mb-3 ring-4 ring-white dark:ring-surface-dark bg-gray-200" 
+                  style={{ backgroundImage: `url('${activePatientData?.image || ''}')` }}
+                >
+                    {!activePatientData?.image && <span className="flex items-center justify-center h-full text-2xl font-bold text-gray-400">{activePatientApt.clientName.charAt(0)}</span>}
+                </div>
+                <h3 className="text-lg font-bold text-text-dark dark:text-white">{activePatientApt.clientName}</h3>
+                <p className="text-sm text-text-muted dark:text-gray-400">Objetivo: {activePatientData?.goal || 'No definido'}</p>
+                <p className="text-xs mt-2 bg-white dark:bg-black/20 px-2 py-1 rounded text-primary font-bold">
+                    Turno: {activePatientApt.startTime} hs
+                </p>
+              </div>
+
+              {activePatientData ? (
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="bg-white dark:bg-black/20 p-3 rounded-lg text-center">
+                        <p className="text-xs text-text-muted dark:text-gray-400">Peso Actual</p>
+                        <p className="text-lg font-bold text-text-dark dark:text-white">{activePatientData.weight} kg</p>
+                    </div>
+                    <div className="bg-white dark:bg-black/20 p-3 rounded-lg text-center">
+                        <p className="text-xs text-text-muted dark:text-gray-400">Grasa %</p>
+                        <p className="text-lg font-bold text-text-dark dark:text-white">{activePatientData.bodyFat}%</p>
+                    </div>
+                  </div>
+              ) : (
+                  <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-xs text-center text-yellow-700 dark:text-yellow-400">
+                      Este paciente no tiene perfil de datos creado aún.
+                  </div>
+              )}
+
+              <button 
+                onClick={() => handleViewProfile(activePatientApt.clientName)}
+                className="w-full bg-text-dark dark:bg-white text-white dark:text-black font-bold py-3 rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Ver Perfil Completo
               </button>
             </div>
-            <div className="flex flex-col items-center text-center mb-6">
-              <div 
-                className="w-20 h-20 rounded-full bg-cover bg-center mb-3 ring-4 ring-white dark:ring-surface-dark" 
-                style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCScO8kJilVTwzzSZvuVtF8diyIWMcwyNnto9BYPvA42-gCnGt9SzhUnpC0w-SQLf6tprecAjpFVGWYPcla5jNqy5vRZMykwiK4Qp6rEo9xEirZT9RN7-LnnUa9WlV2C2kCogThKLxNKwnQW25dXdzCcTZPsBW-ktcXO1aWqOYBjj2-kUIUzk_t3u3_mk1zU1QB6UsezXpyLHxUV-sgeR7GQlYGcN5C8w40EBalYbdGnwe-ltPCmunGTOiwIgjcb5P7e10AzkKx6_A')" }}
-              ></div>
-              <h3 className="text-lg font-bold text-text-dark dark:text-white">Jorge Mendez</h3>
-              <p className="text-sm text-text-muted dark:text-gray-400">Objetivo: Hipertrofia</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="bg-white dark:bg-black/20 p-3 rounded-lg text-center">
-                <p className="text-xs text-text-muted dark:text-gray-400">Peso Actual</p>
-                <p className="text-lg font-bold text-text-dark dark:text-white">82.5 kg</p>
-              </div>
-              <div className="bg-white dark:bg-black/20 p-3 rounded-lg text-center">
-                <p className="text-xs text-text-muted dark:text-gray-400">Grasa %</p>
-                <p className="text-lg font-bold text-text-dark dark:text-white">14.2%</p>
-              </div>
-            </div>
-            <button className="w-full bg-text-dark dark:bg-white text-white dark:text-black font-bold py-3 rounded-lg hover:opacity-90 transition-opacity">
-              Ver Perfil Completo
-            </button>
-          </div>
+          ) : (
+             <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-6 border border-input-border dark:border-gray-700 text-center text-text-muted">
+                 No hay turnos activos para procesar.
+             </div>
+          )}
 
           {/* Recent Activity Feed */}
           <div className="bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl p-5 shadow-sm">
@@ -299,6 +446,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, appointments = [], on
           </div>
         </div>
       </div>
+      
+      <style>{`
+          .input-field {
+                width: 100%;
+                border-radius: 0.5rem;
+                border: 1px solid #cfe7d7;
+                padding: 0.5rem;
+                font-size: 0.875rem;
+                color: #0d1b12;
+                background-color: white;
+            }
+            .dark .input-field {
+                background-color: #1a2e22;
+                border-color: #374151;
+                color: white;
+            }
+      `}</style>
     </div>
   );
 };

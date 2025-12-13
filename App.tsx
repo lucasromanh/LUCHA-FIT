@@ -6,8 +6,8 @@ import Clients from './pages/Clients';
 import Calendar from './pages/Calendar';
 import Reports from './pages/Reports';
 import Sidebar from './components/Sidebar';
-import { Appointment } from './types';
-import { UPCOMING_APPOINTMENTS } from './constants';
+import { Appointment, Client } from './types';
+import { UPCOMING_APPOINTMENTS, CLIENTS } from './constants';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -16,6 +16,10 @@ const App: React.FC = () => {
 
   // Global Appointment State (Simulating Database)
   const [appointments, setAppointments] = useState<Appointment[]>(UPCOMING_APPOINTMENTS);
+
+  // State to pass data between Dashboard and Reports
+  const [selectedClientForReports, setSelectedClientForReports] = useState<Client | null>(null);
+  const [reportViewMode, setReportViewMode] = useState<'details' | 'new' | 'list'>('list');
 
   const handleLogin = () => {
     setIsAuthenticated(true);
@@ -28,6 +32,11 @@ const App: React.FC = () => {
   };
 
   const navigateTo = (page: string) => {
+    // Reset report state if navigating normally
+    if (page === 'reports') {
+        setSelectedClientForReports(null);
+        setReportViewMode('list');
+    }
     setCurrentPage(page);
     setIsMobileMenuOpen(false);
   };
@@ -42,6 +51,38 @@ const App: React.FC = () => {
     setAppointments(prev => prev.map(apt => 
       apt.id === id ? { ...apt, status: 'pending', colorClass: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' } : apt
     ));
+  };
+
+  // Function called by Dashboard to reschedule
+  const handleRescheduleBooking = (id: string, newDate: string, newTime: string) => {
+      setAppointments(prev => prev.map(apt => 
+          apt.id === id ? { 
+              ...apt, 
+              date: new Date(newDate + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
+              rawDate: newDate, // Keep ISO for logic if needed
+              startTime: newTime,
+              endTime: `${parseInt(newTime.split(':')[0]) + 1}:00` // Simple 1h duration logic
+          } : apt
+      ));
+  };
+
+  // Function called by Dashboard to Start Measurement or View Profile
+  const handleGoToReports = (clientName: string, mode: 'new' | 'details') => {
+      // Find the full Client object based on the name from the appointment
+      const client = CLIENTS.find(c => c.name.toLowerCase() === clientName.toLowerCase());
+      
+      if (client) {
+          setSelectedClientForReports(client);
+          setReportViewMode(mode);
+          setCurrentPage('reports');
+      } else {
+          // If client doesn't exist, go to Reports List so user can see they need to add one or search manually
+          // This matches the user request to stay in "Mediciones" logic
+          console.warn("Client not found, redirecting to Reports List");
+          setSelectedClientForReports(null);
+          setReportViewMode('list');
+          setCurrentPage('reports');
+      }
   };
 
   // If we are on Home page, render Home
@@ -120,11 +161,18 @@ const App: React.FC = () => {
               onNavigate={navigateTo} 
               appointments={appointments} 
               onConfirmBooking={handleConfirmBooking}
+              onRescheduleBooking={handleRescheduleBooking}
+              onGoToReports={handleGoToReports}
             />
           )}
           {currentPage === 'clients' && <Clients />}
           {currentPage === 'calendar' && <Calendar />}
-          {currentPage === 'reports' && <Reports />}
+          {currentPage === 'reports' && (
+              <Reports 
+                  externalClient={selectedClientForReports}
+                  externalViewMode={reportViewMode}
+              />
+          )}
           {currentPage === 'settings' && (
               <div className="flex flex-col items-center justify-center h-full text-text-muted">
                   <span className="material-symbols-outlined text-6xl mb-4 opacity-50">settings</span>

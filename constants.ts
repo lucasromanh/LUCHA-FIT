@@ -1,4 +1,4 @@
-import { Client, Appointment } from './types';
+import { Client, Appointment, MeasurementRecord } from './types';
 
 export const CLIENTS: Client[] = [
   {
@@ -43,7 +43,7 @@ export const CLIENTS: Client[] = [
   {
     id: 'C-1030',
     name: 'Ana López',
-    image: '', // Needs initials fallback
+    image: '', 
     age: 22,
     gender: 'Femenino',
     weight: 55.0,
@@ -71,7 +71,7 @@ export const CLIENTS: Client[] = [
 export const UPCOMING_APPOINTMENTS: Appointment[] = [
   {
     id: '1',
-    clientName: 'Martina Gómez',
+    clientName: 'Juan Pérez', 
     type: 'Consulta Inicial',
     date: '24 Oct, 2023',
     startTime: '14:30',
@@ -81,7 +81,7 @@ export const UPCOMING_APPOINTMENTS: Appointment[] = [
   },
   {
     id: '2',
-    clientName: 'Lucas Perez',
+    clientName: 'María González', 
     type: 'Seguimiento',
     date: '24 Oct, 2023',
     startTime: '16:00',
@@ -98,3 +98,33 @@ export const CHART_DATA = [
   { month: 'Abr', peso: 79.2, grasa: 19 },
   { month: 'May', peso: 78.5, grasa: 18.5 },
 ];
+
+// MOCK MEASUREMENT HISTORY FOR REPORTS
+export const MOCK_HISTORY: Record<string, MeasurementRecord[]> = {
+  'C-1024': [
+    {
+      id: 'm-2',
+      clientId: 'C-1024',
+      date: '2024-04-15', // Current
+      evaluator: 'Dr. Lucha',
+      data: {
+        basic: { mass: 78.5, stature: 178, sitting_height: 92, arm_span: 180 },
+        skinfolds: { triceps: 11, subscapular: 12, biceps: 4, iliac_crest: 15, supraspinale: 9, abdominal: 18, thigh: 10, calf: 6 },
+        girths: { arm_relaxed: 32, arm_flexed: 35.5, waist: 82, hips: 98, mid_thigh: 56, calf_girth: 38 },
+        breadths: { humerus: 7.2, bistyloid: 5.4, femur: 9.8 }
+      }
+    },
+    {
+      id: 'm-1',
+      clientId: 'C-1024',
+      date: '2024-01-15', // Previous
+      evaluator: 'Dr. Lucha',
+      data: {
+        basic: { mass: 81.0, stature: 178, sitting_height: 92, arm_span: 180 },
+        skinfolds: { triceps: 14, subscapular: 15, biceps: 5, iliac_crest: 19, supraspinale: 12, abdominal: 22, thigh: 12, calf: 8 },
+        girths: { arm_relaxed: 31, arm_flexed: 34, waist: 88, hips: 101, mid_thigh: 58, calf_girth: 39 },
+        breadths: { humerus: 7.2, bistyloid: 5.4, femur: 9.8 }
+      }
+    }
+  ]
+};
