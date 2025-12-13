@@ -301,17 +301,60 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
   const handleSelectClientForReport = (client: Client) => { setSelectedClient(client); loadClientData(client.id); setView('details'); };
   const handleSelectClientForNew = (client: Client) => { setSelectedClient(client); initNewForm(); setView('new'); };
   const handleBack = () => { setView('list'); setSelectedClient(null); setFormErrors([]); };
+  
   const handleNewInputChange = (metricId: string, field: 'v1' | 'v2' | 'v3', value: string) => {
       if (!/^\d*\.?\d*$/.test(value)) return;
       setMeasurements(prev => ({ ...prev, [metricId]: { ...prev[metricId], [field]: value } }));
   };
-  const calculateFormAverage = (metricId: string) => {
-      const m = measurements[metricId];
-      if (!m) return 0;
-      const v1 = parseFloat(m.v1) || 0; const v2 = parseFloat(m.v2) || 0; const v3 = parseFloat(m.v3) || 0;
-      if (v1 > 0 && v2 > 0 && v3 > 0) return ((v1 + v2 + v3) / 3).toFixed(2);
-      return '-';
+
+  // --- ISAK LOGIC HELPERS ---
+  
+  // Define allowed difference (Threshold) per section type
+  const getAllowedDiff = (sectionId: string) => {
+      switch(sectionId) {
+          case 'skinfolds': return 1.0; // > 1mm
+          case 'breadths': return 0.2; // > 2mm (0.2cm)
+          case 'girths': return 0.5; // > 5mm (0.5cm)
+          case 'basic': return 0.5; // Default safe threshold for basics
+          default: return 9999;
+      }
   };
+
+  // Check if 3rd measurement is required based on v1 and v2 difference
+  const needsThirdMeasure = (metricId: string, sectionId: string) => {
+      const m = measurements[metricId];
+      if (!m || !m.v1 || !m.v2) return false;
+      const v1 = parseFloat(m.v1);
+      const v2 = parseFloat(m.v2);
+      if (isNaN(v1) || isNaN(v2)) return false;
+      
+      const threshold = getAllowedDiff(sectionId);
+      return Math.abs(v1 - v2) > threshold;
+  };
+
+  // Calculate Final Value (Mean of 2 or Median of 3)
+  const calculateFinalValue = (metricId: string, sectionId: string) => {
+      const m = measurements[metricId];
+      if (!m) return '-';
+      const v1 = parseFloat(m.v1);
+      const v2 = parseFloat(m.v2);
+      const v3 = parseFloat(m.v3);
+
+      // Need at least 2 values
+      if (isNaN(v1) || isNaN(v2)) return '-';
+
+      const thirdNeeded = needsThirdMeasure(metricId, sectionId);
+
+      // If 3rd needed and provided, use Median
+      if (thirdNeeded && !isNaN(v3)) {
+          const values = [v1, v2, v3].sort((a, b) => a - b);
+          return values[1].toFixed(2); // Median is the middle value
+      }
+
+      // Default: Average of 2
+      return ((v1 + v2) / 2).toFixed(2);
+  };
+
   const validateAndSaveNew = () => { alert("Medición guardada correctamente."); handleBack(); };
 
   const ZScoreRow = ({ label, value, metricId }: { label: string, value: number, metricId: string }) => {
@@ -399,19 +442,51 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                             <table className="w-full text-left text-sm">
                                 <thead>
                                     <tr className="border-b border-input-border dark:border-gray-700 text-xs text-text-muted uppercase bg-white dark:bg-surface-dark">
-                                        <th className="px-4 py-3 w-12 text-center">Nº</th><th className="px-4 py-3 min-w-[150px]">Medida</th><th className="px-2 py-3 w-24 text-center">1ª Toma</th><th className="px-2 py-3 w-24 text-center">2ª Toma</th><th className="px-2 py-3 w-24 text-center">3ª Toma</th><th className="px-4 py-3 w-24 text-center bg-gray-50/50 dark:bg-white/5">Promedio</th>
+                                        <th className="px-4 py-3 w-12 text-center">Nº</th><th className="px-4 py-3 min-w-[150px]">Medida</th><th className="px-2 py-3 w-24 text-center">1ª Toma</th><th className="px-2 py-3 w-24 text-center">2ª Toma</th><th className="px-2 py-3 w-24 text-center">3ª Toma</th><th className="px-4 py-3 w-24 text-center bg-gray-50/50 dark:bg-white/5">Valor Final</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-input-border dark:divide-gray-700">
-                                    {section.metrics.map((metric) => (
-                                        <tr key={metric.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                                            <td className="px-4 py-3 text-center font-bold text-gray-400">{metric.num}</td><td className="px-4 py-3 font-medium text-text-dark dark:text-white">{metric.label} ({metric.unit})</td>
-                                            {['v1', 'v2', 'v3'].map(field => (
-                                                <td key={field} className="px-2 py-2"><input type="number" placeholder="0.0" value={measurements[metric.id]?.[field as any] || ''} onChange={(e) => handleNewInputChange(metric.id, field as any, e.target.value)} className="w-full text-center rounded-lg border border-input-border dark:border-gray-600 bg-white dark:bg-black/20 p-2 focus:ring-primary focus:border-primary text-text-dark dark:text-white" /></td>
-                                            ))}
-                                            <td className="px-4 py-3 text-center font-bold text-text-dark dark:text-white bg-gray-50/50 dark:bg-white/5">{calculateFormAverage(metric.id)}</td>
-                                        </tr>
-                                    ))}
+                                    {section.metrics.map((metric) => {
+                                        const isThirdRequired = needsThirdMeasure(metric.id, section.id);
+                                        return (
+                                            <tr key={metric.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                                                <td className="px-4 py-3 text-center font-bold text-gray-400">{metric.num}</td>
+                                                <td className="px-4 py-3 font-medium text-text-dark dark:text-white">{metric.label} ({metric.unit})</td>
+                                                
+                                                {/* V1 Input */}
+                                                <td className="px-2 py-2">
+                                                    <input type="number" placeholder="0.0" value={measurements[metric.id]?.v1 || ''} onChange={(e) => handleNewInputChange(metric.id, 'v1', e.target.value)} className="w-full text-center rounded-lg border border-input-border dark:border-gray-600 bg-white dark:bg-black/20 p-2 focus:ring-primary focus:border-primary text-text-dark dark:text-white" />
+                                                </td>
+                                                
+                                                {/* V2 Input */}
+                                                <td className="px-2 py-2">
+                                                    <input type="number" placeholder="0.0" value={measurements[metric.id]?.v2 || ''} onChange={(e) => handleNewInputChange(metric.id, 'v2', e.target.value)} className="w-full text-center rounded-lg border border-input-border dark:border-gray-600 bg-white dark:bg-black/20 p-2 focus:ring-primary focus:border-primary text-text-dark dark:text-white" />
+                                                </td>
+                                                
+                                                {/* V3 Input - Conditionally Enabled */}
+                                                <td className="px-2 py-2 relative">
+                                                    <input 
+                                                        type="number" 
+                                                        placeholder="-" 
+                                                        value={measurements[metric.id]?.v3 || ''} 
+                                                        disabled={!isThirdRequired}
+                                                        onChange={(e) => handleNewInputChange(metric.id, 'v3', e.target.value)} 
+                                                        className={`w-full text-center rounded-lg border p-2 transition-colors ${
+                                                            isThirdRequired 
+                                                                ? 'border-orange-300 dark:border-orange-500 bg-white dark:bg-black/20 text-text-dark dark:text-white focus:ring-orange-500 focus:border-orange-500' 
+                                                                : 'border-transparent bg-gray-100 dark:bg-white/5 text-gray-300 cursor-not-allowed'
+                                                        }`} 
+                                                    />
+                                                    {isThirdRequired && <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-orange-500"></div>}
+                                                </td>
+                                                
+                                                {/* Calculated Result */}
+                                                <td className="px-4 py-3 text-center font-bold text-text-dark dark:text-white bg-gray-50/50 dark:bg-white/5">
+                                                    {calculateFinalValue(metric.id, section.id)}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -429,6 +504,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
   // 3. REPORTS & COMPARISON VIEW
   return (
     <div className="flex flex-col gap-6 animate-in slide-in-from-right-5 duration-300 pb-20">
+      {/* ... (Existing Report View Code remains unchanged) ... */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b border-dashed border-input-border dark:border-white/10 pb-6">
         <div className="flex flex-col gap-2 max-w-2xl">
           <div className="flex items-center gap-2 mb-2"><button onClick={handleBack} className="text-text-muted hover:text-primary transition-colors font-medium flex items-center gap-1 text-sm"><span className="material-symbols-outlined text-[16px]">arrow_back</span> Volver</button><span className="text-gray-300">|</span><span className="text-primary font-bold uppercase tracking-wider text-xs bg-primary/10 px-2 py-0.5 rounded">Informe ISAK</span></div>

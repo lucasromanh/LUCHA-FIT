@@ -13,7 +13,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, onLogout }) 
     { id: 'clients', label: 'Pacientes', icon: 'group' },
     { id: 'calendar', label: 'Calendario', icon: 'calendar_month' },
     { id: 'reports', label: 'Mediciones', icon: 'show_chart' },
-    { id: 'routines', label: 'Rutinas', icon: 'fitness_center' }, // New Item
+    { id: 'routines', label: 'Rutinas', icon: 'fitness_center' }, 
     { id: 'settings', label: 'Configuración', icon: 'settings' },
   ];
 
@@ -59,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, onLogout }) 
         <div className="flex items-center gap-3 mb-4">
           <div 
             className="size-10 rounded-full bg-cover bg-center border-2 border-primary" 
-            style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBrpTaA0VBngwNQfOM6EJfqUTLYoReFLlORoBE46fF1VwBhMU2lSIG8ZykB2FpZHUXqeTOi3jF0XHsbMPxc3-bXQaf2mAjoPXOPr98thAhzyxHAKqJJw4rUCWq5h8yxU6QhNo3t2HaiZlr1pmzXVw8cmvoAL5iuzUFf0gGjGZSQzJe5HxG7PFkL0_6Z8ES9vsTgt5d_wN853xxTJjdKBKy7OmwB2cr_PI1c2BRdjyuJ9HNJsuJ94p_rd6mgGRXqW-NoMs3rQ_21hMw')" }}
+            style={{ backgroundImage: `url('${PROFESSIONAL_PROFILE.image}')` }}
           ></div>
           <div className="flex flex-col overflow-hidden">
             <p className="text-sm font-bold text-text-dark dark:text-white truncate" title={PROFESSIONAL_PROFILE.name}>{PROFESSIONAL_PROFILE.name}</p>

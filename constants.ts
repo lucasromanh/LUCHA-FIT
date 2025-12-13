@@ -1,8 +1,16 @@
 import { Client, Appointment, MeasurementRecord, Routine } from './types';
 
+// --- ASSETS CONFIGURATION ---
+// Ensure these images are placed in your 'public' folder
+export const ASSETS = {
+  logo: '/logo.png',       // The LuchaFit Logo (Apple + Text)
+  profile: '/profile.jpg'  // Luciana's Profile Picture
+};
+
 export const PROFESSIONAL_PROFILE = {
   name: "Luciana Milagros Burgos",
   isak_level: 1,
+  image: ASSETS.profile,
   get display() { return `${this.name} — ISAK nivel ${this.isak_level}`; }
 };
 

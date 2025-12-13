@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ASSETS } from '../constants';
 
 interface LoginProps {
   onLogin: () => void;
@@ -21,12 +22,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
         {/* Logo Header */}
         <div className="px-8 py-6 md:px-12 md:py-8 flex justify-between items-center">
           <a className="flex items-center gap-3 text-text-dark group transition-opacity hover:opacity-80" href="#" onClick={(e) => { e.preventDefault(); if(onBack) onBack(); }}>
-            <div className="w-8 h-8 md:w-10 md:h-10 text-primary">
-              <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                <path clipRule="evenodd" d="M47.2426 24L24 47.2426L0.757355 24L24 0.757355L47.2426 24ZM12.2426 21H35.7574L24 9.24264L12.2426 21Z" fill="currentColor" fillRule="evenodd"></path>
-              </svg>
-            </div>
-            <h2 className="text-xl md:text-2xl font-black tracking-tighter text-text-dark dark:text-white">LUCHA-FIT</h2>
+            <img src={ASSETS.logo} alt="LUCHA-FIT" className="h-12 w-auto object-contain" />
           </a>
           {onBack && (
               <button onClick={onBack} className="text-sm font-medium text-text-muted hover:text-primary transition-colors flex items-center gap-1">

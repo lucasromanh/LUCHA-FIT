@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Appointment } from '../types';
+import { ASSETS } from '../constants';
 
 interface HomeProps {
   onNavigate: (page: string) => void;
@@ -354,10 +355,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
       <div className="layout-container flex w-full flex-col">
         <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7f3eb] dark:border-b-[#1f3526] bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm px-4 lg:px-40 py-3">
           <div className="flex items-center gap-4 text-text-dark dark:text-white">
-            <div className="size-6 text-primary">
-              <span className="material-symbols-outlined !text-[28px]">health_metrics</span>
-            </div>
-            <h2 className="text-text-dark dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">LUCHA-FIT</h2>
+            <img src={ASSETS.logo} alt="LUCHA-FIT" className="h-10 w-auto object-contain" />
           </div>
           <div className="hidden md:flex flex-1 justify-end gap-8">
             <div className="flex items-center gap-9">
@@ -608,8 +606,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
             <div className="max-w-[960px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
               <div className="col-span-1 md:col-span-2">
                 <div className="flex items-center gap-2 text-text-dark dark:text-white mb-4">
-                  <span className="material-symbols-outlined text-primary">health_metrics</span>
-                  <span className="font-bold text-xl">LUCHA-FIT</span>
+                  <img src={ASSETS.logo} alt="LUCHA-FIT" className="h-10 w-auto object-contain" />
                 </div>
                 <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs">
                   Especialistas en antropometría y rendimiento deportivo. Transformamos datos en resultados visibles.
