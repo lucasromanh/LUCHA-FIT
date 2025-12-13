@@ -439,14 +439,14 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
                       <div className="w-8 h-8 rounded-full border-2 border-background-light dark:border-background-dark bg-gray-200 bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAyXCJBOe92ZdzIiHOJ0fTQzbVnX77jjFqnAncyJAWJCTYO7VEhBM5ftrSQom7_1lfccA88zN6_FDgyAJXrTIjpFI80UWNMw7G5XFl7iHLme_FiFOie8IMTPRclxasAmCmLGTfE2SZZ3BjJ47pHrDZEfoGUFcA_VilAc3fkQsOIfQINnGF-nmkkoS10W7h1EDIf36qCokAFGn_lpMnn-f1i1pEVpE7QZ6QBNx_3mbH-UbJ6O1ZUJ6oK_1nzlWo7CCq--cA8eqjXP2c')" }}></div>
                       <div className="w-8 h-8 rounded-full border-2 border-background-light dark:border-background-dark bg-gray-200 bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuB0qcg_rPbAsw9lJRpSAA392sMKX_lKBqI38FtAvO3d6h_7r3SqtMnAbWojyyH8QVljcu4GcGppR8ggzCSMcDE1Vb4NHk3rcS7B5jZCLRIOnwH3bCr4rarYrHnVPKg_N8ObFe1H0Rzbh94vv72aFFGd9MrP3nfXaQLyg2GDUVv-TIgfB9KP3kN30k2Obil69q46KM_NdnC0HFHnKlgxHz9icunNUhDDIUJ_tWHWxky8doKSfCzS7YqLMDOKED_Fo-o0D4CpHnRmA_k')" }}></div>
                     </div>
-                    <p className="text-xs font-medium text-text-dark dark:text-gray-400">+500 atletas optimizados</p>
+                    <p className="text-xs font-medium text-text-dark dark:text-gray-400">+150 atletas optimizados</p>
                   </div>
                 </div>
                 <div
                   className="w-full flex-1 aspect-square max-h-[500px] bg-center bg-no-repeat bg-cover rounded-2xl shadow-xl overflow-hidden relative group"
-                  style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAwpOzQgqydbIJy7BqLKbtjIp4uMQOxsnJ54J-FB3Jjx6Uqh3ZlAEbF5Yu-eshJRw_LHwEE-vMKhrWh4hastPd3YOi_3eammamttyXIgu8Qn_95EFItbVMstVJOlK9vv13ElhnJAh3gNaEB_Qjjf9G9IjJTX5imxGlgWyWiwh1ucNhAoDJZhSjSflXVsQRbOx4n-r9MgSDJmQYznA_-GghNjPnuc9clHDcv1DF72gSEUa3dRHAKY3-MacEVr-1FlGk-DYo4m_20VqU')" }}
+                  style={{ backgroundImage: "url('/lucha2.jpg')" }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                  <div className="absolute inset-0 bg-black/10 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
                     <div className="bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-md p-4 rounded-xl shadow-lg border-l-4 border-primary">
                       <p className="text-sm font-bold text-text-dark dark:text-white">Análisis Corporal Completo</p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">Datos precisos = Resultados reales</p>
