@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { CLIENTS } from '../constants';
 import { Client } from '../types';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 // --- DATA CONSTANTS ---
 
@@ -48,6 +49,11 @@ const Clients: React.FC = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'create' | 'edit' | 'view'>('create');
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; clientId: string | null; clientName: string }>({ 
+    isOpen: false, 
+    clientId: null,
+    clientName: ''
+  });
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
 
   // Sports Search State
@@ -150,9 +156,19 @@ const Clients: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('¿Estás seguro de eliminar este perfil?')) {
-      setClientsData(prev => prev.filter(c => c.id !== id));
+    const client = clientsData.find(c => c.id === id);
+    setConfirmDelete({ 
+      isOpen: true, 
+      clientId: id,
+      clientName: client?.name || 'este perfil'
+    });
+  };
+
+  const confirmDeleteAction = () => {
+    if (confirmDelete.clientId) {
+      setClientsData(prev => prev.filter(c => c.id !== confirmDelete.clientId));
     }
+    setConfirmDelete({ isOpen: false, clientId: null, clientName: '' });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -673,6 +689,18 @@ const Clients: React.FC = () => {
                 cursor: not-allowed;
             }
         `}</style>
+
+      {/* Modal de Confirmación para Eliminar */}
+      <ConfirmModal
+        isOpen={confirmDelete.isOpen}
+        title="Eliminar Perfil de Cliente"
+        message={`¿Estás seguro de que deseas eliminar el perfil de ${confirmDelete.clientName}?\n\nEsta acción no se puede deshacer y se perderán todos los datos asociados.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+        onConfirm={confirmDeleteAction}
+        onCancel={() => setConfirmDelete({ isOpen: false, clientId: null, clientName: '' })}
+      />
     </div>
   );
 };

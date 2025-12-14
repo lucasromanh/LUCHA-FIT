@@ -1,12 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { CLIENTS, MOCK_ROUTINES, PROFESSIONAL_PROFILE } from '../constants';
 import { Client, Routine, RoutineSession, RoutineExercise, ExerciseBlock } from '../types';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 type RoutineView = 'list' | 'client_details' | 'editor';
 
 const Routines: React.FC = () => {
     const [view, setView] = useState<RoutineView>('list');
     const [searchTerm, setSearchTerm] = useState('');
+    const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; routineId: string | null; routineTitle: string }>({ 
+        isOpen: false, 
+        routineId: null,
+        routineTitle: ''
+    });
 
     // Selected Context
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -87,12 +93,24 @@ const Routines: React.FC = () => {
     };
 
     const handleDeleteRoutine = (routineId: string) => {
-        if (selectedClient && window.confirm('⚠ ¿Estás seguro de que deseas ELIMINAR permanentemente esta rutina?\n\nEsta acción no se puede deshacer.')) {
+        if (selectedClient) {
+            const routine = routines[selectedClient.id]?.find(r => r.id === routineId);
+            setConfirmDelete({ 
+                isOpen: true, 
+                routineId: routineId,
+                routineTitle: routine?.title || 'esta rutina'
+            });
+        }
+    };
+
+    const confirmDeleteAction = () => {
+        if (selectedClient && confirmDelete.routineId) {
             setRoutines(prev => ({
                 ...prev,
-                [selectedClient.id]: prev[selectedClient.id].filter(r => r.id !== routineId)
+                [selectedClient.id]: prev[selectedClient.id].filter(r => r.id !== confirmDelete.routineId)
             }));
         }
+        setConfirmDelete({ isOpen: false, routineId: null, routineTitle: '' });
     };
 
     // --- EXPORT LOGIC (EXCEL FORMATTED & PDF) ---
@@ -403,9 +421,11 @@ const Routines: React.FC = () => {
     };
 
     // --- RENDER ---
+    
+    let content = null;
 
     if (view === 'list') {
-        return (
+        content = (
             <div className="flex flex-col gap-8 animate-in fade-in duration-300">
                 <div className="flex flex-col gap-2">
                     <h1 className="text-3xl font-black text-text-dark dark:text-white tracking-tight">Gestión de Rutinas</h1>
@@ -442,7 +462,7 @@ const Routines: React.FC = () => {
 
     if (view === 'client_details' && selectedClient) {
         const clientRoutines = routines[selectedClient.id] || [];
-        return (
+        content = (
             <div className="flex flex-col gap-6 animate-in slide-in-from-right-5 duration-300">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-input-border dark:border-gray-700 pb-6">
@@ -507,7 +527,7 @@ const Routines: React.FC = () => {
     }
 
     if (view === 'editor' && editorData && selectedClient) {
-        return (
+        content = (
             <div className="flex flex-col gap-6 animate-in slide-in-from-bottom-5 duration-300 pb-20">
                 {/* Editor Header */}
                 <div className="flex items-center justify-between border-b border-input-border dark:border-gray-700 pb-4 sticky top-0 bg-background-light dark:bg-background-dark z-20 pt-2">
@@ -601,7 +621,23 @@ const Routines: React.FC = () => {
         );
     }
 
-    return null;
+    return (
+        <>
+            {content}
+            
+            {/* Modal de Confirmación para Eliminar - Global */}
+            <ConfirmModal
+                isOpen={confirmDelete.isOpen}
+                title="Eliminar Rutina"
+                message={`¿Estás seguro de que deseas ELIMINAR permanentemente la rutina "${confirmDelete.routineTitle}"?\n\nEsta acción no se puede deshacer y se perderán todos los ejercicios y configuraciones.`}
+                confirmText="Eliminar"
+                cancelText="Cancelar"
+                type="danger"
+                onConfirm={confirmDeleteAction}
+                onCancel={() => setConfirmDelete({ isOpen: false, routineId: null, routineTitle: '' })}
+            />
+        </>
+    );
 };
 
 export default Routines;

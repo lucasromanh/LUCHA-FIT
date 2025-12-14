@@ -6,6 +6,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
 import { PrintableReport } from '../components/PrintableReport';
+import { LoadingOverlay } from '../components/LoadingOverlay';
 import { createRoot } from 'react-dom/client';
 
 type ViewMode = 'list' | 'details' | 'new';
@@ -232,74 +233,6 @@ interface ExportData {
     calfPerc: number;
 }
 
-const exportToPDF = async (data: ExportData) => {
-    try {
-        // Crear contenedor oculto para renderizar el componente
-        const container = document.createElement('div');
-        container.style.position = 'absolute';
-        container.style.left = '-9999px';
-        container.style.top = '0';
-        container.style.width = '210mm';
-        document.body.appendChild(container);
-
-        // Renderizar el componente PrintableReport
-        const root = createRoot(container);
-        root.render(
-            <PrintableReport
-                client={data.client}
-                currentRecord={data.currentRecord}
-                prevRecord={data.prevRecord}
-                calculations={data}
-            />
-        );
-
-        // Esperar a que el componente se renderice completamente
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Crear PDF
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = 210;
-        const pdfHeight = 297;
-
-        // Obtener todas las páginas del componente (divs con la clase page-break)
-        const pages = container.querySelectorAll('.pdf-page');
-        
-        for (let i = 0; i < pages.length; i++) {
-            const page = pages[i] as HTMLElement;
-            
-            // Capturar cada página individual
-            const canvas = await html2canvas(page, {
-                scale: 2,
-                backgroundColor: '#ffffff',
-                logging: false,
-                useCORS: true,
-                width: page.offsetWidth,
-                height: page.offsetHeight
-            });
-
-            const imgData = canvas.toDataURL('image/png');
-            
-            // Agregar página al PDF (excepto la primera vez)
-            if (i > 0) {
-                pdf.addPage();
-            }
-            
-            // Agregar la imagen al PDF
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        }
-
-        // Descargar PDF
-        pdf.save(`Informe_Completo_${data.client.name.replace(/\s+/g, '_')}_${data.currentRecord.date}.pdf`);
-
-        // Limpiar
-        root.unmount();
-        document.body.removeChild(container);
-    } catch (error) {
-        console.error('Error generando PDF:', error);
-        alert('Error al generar el PDF. Por favor intente nuevamente.');
-    }
-};
-
 const exportToExcel = (data: ExportData) => {
     const { client, currentRecord, prevRecord } = data;
 
@@ -464,6 +397,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
     const [view, setView] = useState<ViewMode>('list');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
     // New Measurement State
     const [measurements, setMeasurements] = useState<MeasurementValues>({});
@@ -587,6 +521,77 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
     ];
 
     // --- ACTIONS ---
+    const exportToPDF = async (data: ExportData) => {
+        setIsGeneratingPDF(true);
+        try {
+            // Crear contenedor oculto para renderizar el componente
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.left = '-9999px';
+            container.style.top = '0';
+            container.style.width = '210mm';
+            document.body.appendChild(container);
+
+            // Renderizar el componente PrintableReport
+            const root = createRoot(container);
+            root.render(
+                <PrintableReport
+                    client={data.client}
+                    currentRecord={data.currentRecord}
+                    prevRecord={data.prevRecord}
+                    calculations={data}
+                />
+            );
+
+            // Esperar a que el componente se renderice completamente
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Crear PDF
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = 210;
+            const pdfHeight = 297;
+
+            // Obtener todas las páginas del componente (divs con la clase page-break)
+            const pages = container.querySelectorAll('.pdf-page');
+            
+            for (let i = 0; i < pages.length; i++) {
+                const page = pages[i] as HTMLElement;
+                
+                // Capturar cada página individual
+                const canvas = await html2canvas(page, {
+                    scale: 2,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    useCORS: true,
+                    width: page.offsetWidth,
+                    height: page.offsetHeight
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Agregar página al PDF (excepto la primera vez)
+                if (i > 0) {
+                    pdf.addPage();
+                }
+                
+                // Agregar la imagen al PDF
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            }
+
+            // Descargar PDF
+            pdf.save(`Informe_Completo_${data.client.name.replace(/\s+/g, '_')}_${data.currentRecord.date}.pdf`);
+
+            // Limpiar
+            root.unmount();
+            document.body.removeChild(container);
+        } catch (error) {
+            console.error('Error generando PDF:', error);
+            alert('Error al generar el PDF. Por favor intente nuevamente.');
+        } finally {
+            setIsGeneratingPDF(false);
+        }
+    };
+    
     const handleSendMail = () => { if (selectedClient) alert(`Enviando informe por correo a: ${selectedClient.email || 'correo@cliente.com'}`); };
     
     const handleExportPDF = () => {
@@ -1291,6 +1296,14 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                     </div>
 
                 </>
+            )}
+
+            {/* Loading Overlay para generación de PDF */}
+            {isGeneratingPDF && (
+                <LoadingOverlay 
+                    message="Generando Informe PDF"
+                    submessage={`Preparando informe completo de ${selectedClient?.name || 'paciente'}...`}
+                />
             )}
         </div>
     );
