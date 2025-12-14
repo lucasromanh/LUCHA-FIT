@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# FTP credentials
+.ftpconfig
+sftp.json
+sftp-config.json
+ftp-sync.json
