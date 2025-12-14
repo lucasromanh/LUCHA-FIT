@@ -87,7 +87,7 @@ export const getPendingEmail = (name: string, date: string, time: string, servic
             <li style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Hora:</strong> ${time} hs</li>
         </ul>
 
-        <p>El Dr. Lucha revisará la disponibilidad y recibirás un nuevo correo cuando tu turno sea confirmado.</p>
+        <p>Luciana Burgos ISAK Nivel 1 revisará la disponibilidad y recibirás un nuevo correo cuando tu turno sea confirmado.</p>
     `;
     return getBaseHtml(title, body);
 };

@@ -324,7 +324,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
                   </div>
                   <h4 className="text-2xl font-black text-text-dark dark:text-white">¡Solicitud Recibida!</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Tu turno ha sido pre-seleccionado. El Dr. Lucha revisará la disponibilidad y recibirás un mail de confirmación en <span className="font-bold text-text-dark dark:text-white">{formData.email}</span> cuando sea aprobado.
+                    Tu turno ha sido pre-seleccionado. Luciana Burgos ISAK Nivel 1 revisará la disponibilidad y recibirás un mail de confirmación en <span className="font-bold text-text-dark dark:text-white">{formData.email}</span> cuando sea aprobado.
                   </p>
 
                   <div className="w-full bg-[#f8fcf9] dark:bg-white/5 rounded-xl p-4 border border-input-border dark:border-gray-700 mt-2">

@@ -1,7 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, BarChart, Bar, YAxis, CartesianGrid, Legend, ReferenceLine, LineChart, Line } from 'recharts';
-import { ASSETS, CHART_DATA, CLIENTS, MOCK_HISTORY } from '../constants';
+import { ASSETS, CHART_DATA, CLIENTS, MOCK_HISTORY, PROFESSIONAL_PROFILE } from '../constants';
 import { Client, MeasurementRecord, AnthropometricData } from '../types';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx';
+import { PrintableReport } from '../components/PrintableReport';
+import { createRoot } from 'react-dom/client';
 
 type ViewMode = 'list' | 'details' | 'new';
 
@@ -190,6 +195,270 @@ const ZScoreRow: React.FC<ZScoreRowProps> = ({ label, value, metricId }) => {
     );
 };
 
+// --- PDF & EXCEL EXPORT FUNCTIONS ---
+
+interface ExportData {
+    client: Client;
+    currentRecord: MeasurementRecord;
+    prevRecord: MeasurementRecord | null;
+    somato: { endo: number; meso: number; ecto: number; x: number; y: number };
+    bodyFatPerc: number;
+    fatMass: number;
+    muscleMass: number;
+    boneMass: number;
+    armCorr: number;
+    thighCorr: number;
+    calfCorr: number;
+    sum6: number;
+    sum8: number;
+    adiposeMuscleIndex: number;
+    muscleBoneIndex: number;
+    bsa: number;
+    ipc: number;
+    cormic: number;
+    manouvrier: number;
+    relativeSpan: number;
+    conicityIndex: number;
+    bmr: number;
+    tdee: number;
+    zArmCorr: number;
+    zThighCorr: number;
+    zCalfCorr: number;
+    adiposeSuperior: number;
+    adiposeCentral: number;
+    adiposeInferior: number;
+    armPerc: number;
+    thighPerc: number;
+    calfPerc: number;
+}
+
+const exportToPDF = async (data: ExportData) => {
+    try {
+        // Crear contenedor oculto para renderizar el componente
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.style.width = '210mm';
+        document.body.appendChild(container);
+
+        // Renderizar el componente PrintableReport
+        const root = createRoot(container);
+        root.render(
+            <PrintableReport
+                client={data.client}
+                currentRecord={data.currentRecord}
+                prevRecord={data.prevRecord}
+                calculations={data}
+            />
+        );
+
+        // Esperar a que el componente se renderice completamente
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Crear PDF
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = 210;
+        const pdfHeight = 297;
+
+        // Obtener todas las páginas del componente (divs con la clase page-break)
+        const pages = container.querySelectorAll('.pdf-page');
+        
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i] as HTMLElement;
+            
+            // Capturar cada página individual
+            const canvas = await html2canvas(page, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                logging: false,
+                useCORS: true,
+                width: page.offsetWidth,
+                height: page.offsetHeight
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            
+            // Agregar página al PDF (excepto la primera vez)
+            if (i > 0) {
+                pdf.addPage();
+            }
+            
+            // Agregar la imagen al PDF
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        }
+
+        // Descargar PDF
+        pdf.save(`Informe_Completo_${data.client.name.replace(/\s+/g, '_')}_${data.currentRecord.date}.pdf`);
+
+        // Limpiar
+        root.unmount();
+        document.body.removeChild(container);
+    } catch (error) {
+        console.error('Error generando PDF:', error);
+        alert('Error al generar el PDF. Por favor intente nuevamente.');
+    }
+};
+
+const exportToExcel = (data: ExportData) => {
+    const { client, currentRecord, prevRecord } = data;
+
+    // Sheet 1: Patient Info
+    const patientData = [
+        ['INFORME ANTROPOMÉTRICO ISAK'],
+        [`Evaluador: ${PROFESSIONAL_PROFILE.name}`],
+        [`ISAK Nivel ${PROFESSIONAL_PROFILE.isak_level}`],
+        [],
+        ['DATOS DEL PACIENTE'],
+        ['Nombre', client.name],
+        ['ID', client.id],
+        ['Edad', `${client.age} años`],
+        ['Género', client.gender],
+        ['Objetivo', client.goal],
+        [],
+        ['EVALUACIONES'],
+        ['Tipo', 'Fecha', 'Evaluador'],
+        ['Evaluación Actual', currentRecord.date, currentRecord.evaluator],
+        ['Evaluación Previa', prevRecord ? prevRecord.date : 'N/A', prevRecord ? prevRecord.evaluator : 'N/A'],
+    ];
+
+    // Sheet 2-5: Measurements by Section
+    const measurementsSheets: any = {};
+    ANTHRO_SECTIONS.forEach((section) => {
+        const sheetData = [
+            [section.title.toUpperCase()],
+            [],
+            ['Medida', 'Unidad', 'Actual', 'Previa', 'Diferencia', '% Cambio', 'Z-Score'],
+        ];
+
+        section.metrics.forEach(metric => {
+            const curr = getMetricValue(currentRecord, section.id, metric.id);
+            const prev = getMetricValue(prevRecord, section.id, metric.id);
+            const diff = calcDiff(curr, prev);
+            const percent = calcPercent(curr, prev);
+            const z = getZScore(curr, metric.id);
+
+            sheetData.push([
+                metric.label,
+                metric.unit,
+                curr.toString(),
+                prev ? prev.toString() : 'N/A',
+                prev ? diff.toFixed(1) : 'N/A',
+                prev ? `${percent.toFixed(1)}%` : 'N/A',
+                z.toFixed(2),
+            ]);
+        });
+
+        measurementsSheets[section.title] = sheetData;
+    });
+
+    // Sheet 6: Body Composition
+    const compositionData = [
+        ['COMPOSICIÓN CORPORAL'],
+        [],
+        ['Componente', 'Valor'],
+        ['% Grasa Corporal (Faulkner)', `${data.bodyFatPerc.toFixed(1)}%`],
+        ['Masa Grasa', `${data.fatMass.toFixed(1)} kg`],
+        ['Masa Muscular', `${data.muscleMass.toFixed(1)} kg`],
+        ['Masa Ósea', `${data.boneMass.toFixed(1)} kg`],
+        ['Suma 6 Pliegues', `${data.sum6.toFixed(1)} mm`],
+        ['Suma 8 Pliegues', `${data.sum8.toFixed(1)} mm`],
+        [],
+        ['SOMATOTIPO'],
+        ['Componente', 'Valor'],
+        ['Endomorfia', data.somato.endo.toFixed(1)],
+        ['Mesomorfia', data.somato.meso.toFixed(1)],
+        ['Ectomorfia', data.somato.ecto.toFixed(1)],
+        ['Coordenada X', data.somato.x.toFixed(2)],
+        ['Coordenada Y', data.somato.y.toFixed(2)],
+        [],
+        ['PERÍMETROS CORREGIDOS'],
+        ['Perímetro', 'Valor Corregido'],
+        ['Brazo', `${data.armCorr.toFixed(1)} cm`],
+        ['Muslo', `${data.thighCorr.toFixed(1)} cm`],
+        ['Pierna', `${data.calfCorr.toFixed(1)} cm`],
+    ];
+
+    // Sheet 7: Indices & Health
+    const d = currentRecord.data;
+    const bmi = d.basic.mass / Math.pow(d.basic.stature / 100, 2);
+    const waistHipRatio = d.girths.waist / d.girths.hips;
+
+    const healthData = [
+        ['ÍNDICES DE SALUD'],
+        [],
+        ['Indicador', 'Valor', 'Rango Saludable', 'Interpretación'],
+        ['Perímetro Cintura', `${d.girths.waist} cm`, '70-90 cm', d.girths.waist > 90 ? 'Riesgo aumentado' : 'Normal'],
+        ['Índice Cintura/Cadera', waistHipRatio.toFixed(2), '< 0.84', waistHipRatio > 0.85 ? 'Riesgo moderado' : 'Normal'],
+        ['Índice de Conicidad', data.conicityIndex.toFixed(2), '1.0-1.4', ''],
+        ['Pliegue Abdominal', `${d.skinfolds.abdominal} mm`, '< 12 mm', d.skinfolds.abdominal > 12 ? 'Excesivo' : 'Normal'],
+        ['IMC', bmi.toFixed(1), '18.5-24.9', bmi > 25 ? 'Sobrepeso' : 'Normal'],
+        ['Pliegue Tríceps', `${d.skinfolds.triceps} mm`, '< 12 mm', d.skinfolds.triceps > 15 ? 'Excesivo' : 'Normal'],
+    ];
+
+    const performanceData = [
+        ['ÍNDICES DE RENDIMIENTO'],
+        [],
+        ['Indicador', 'Valor', 'Clasificación'],
+        ['Diferencia Brazo Contraído - Relajado', `${(d.girths.arm_flexed - d.girths.arm_relaxed).toFixed(1)} cm`, 'Desarrollo muscular'],
+        ['Área Superficie Corporal', `${data.bsa.toFixed(2)} m²`, 'Valor normal: 1.9 m²'],
+        ['Índice de Pérdida de Calor (IPC)', data.ipc.toFixed(0), 'Mayor área = mayor disipación'],
+        ['Índice Córmico', data.cormic.toFixed(2), 'Proporción tronco/talla'],
+        ['Índice de Manouvrier', data.manouvrier.toFixed(0), 'Longitud miembros inferiores'],
+        ['Envergadura Relativa', data.relativeSpan.toFixed(2), 'Envergadura/talla'],
+        ['Índice Adiposo-Muscular', data.adiposeMuscleIndex.toFixed(2), 'Kg grasa por kg músculo'],
+        ['Índice Músculo-Óseo', data.muscleBoneIndex.toFixed(2), 'Desarrollo muscular vs estructura ósea'],
+        [],
+        ['GASTO ENERGÉTICO'],
+        ['Parámetro', 'Valor', 'Interpretación'],
+        ['Metabolismo Basal (BMR)', `${data.bmr.toFixed(0)} kcal/día`, 'Harris & Benedict (1919)'],
+        ['Gasto Energético Total (TDEE)', `${data.tdee.toFixed(0)} kcal/día`, 'Factor actividad: 1.5'],
+    ];
+
+    const distributionData = [
+        ['DISTRIBUCIÓN ADIPOSO-MUSCULAR'],
+        [],
+        ['PERÍMETROS CORREGIDOS'],
+        ['Perímetro', 'Total (cm)', 'Corregido (cm)', 'Z-Score', '% Muscular'],
+        ['Brazo', d.girths.arm_relaxed.toFixed(1), data.armCorr.toFixed(1), data.zArmCorr.toFixed(2), `${data.armPerc.toFixed(1)}%`],
+        ['Muslo', d.girths.mid_thigh.toFixed(1), data.thighCorr.toFixed(1), data.zThighCorr.toFixed(2), `${data.thighPerc.toFixed(1)}%`],
+        ['Pierna', d.girths.calf_girth.toFixed(1), data.calfCorr.toFixed(1), data.zCalfCorr.toFixed(2), `${data.calfPerc.toFixed(1)}%`],
+        [],
+        ['DISTRIBUCIÓN TEJIDO ADIPOSO'],
+        ['Región', 'Porcentaje'],
+        ['Superior (Tríceps + Subescapular + Bíceps)', `${data.adiposeSuperior.toFixed(1)}%`],
+        ['Central (Abdominal + Supraespinal + Cresta Ilíaca)', `${data.adiposeCentral.toFixed(1)}%`],
+        ['Inferior (Muslo + Pantorrilla)', `${data.adiposeInferior.toFixed(1)}%`],
+    ];
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Add sheets
+    const ws1 = XLSX.utils.aoa_to_sheet(patientData);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Datos Paciente');
+
+    Object.entries(measurementsSheets).forEach(([name, data]) => {
+        const ws = XLSX.utils.aoa_to_sheet(data as any[][]);
+        XLSX.utils.book_append_sheet(wb, ws, name.substring(0, 31)); // Excel sheet name limit
+    });
+
+    const ws6 = XLSX.utils.aoa_to_sheet(compositionData);
+    XLSX.utils.book_append_sheet(wb, ws6, 'Composición');
+
+    const ws7 = XLSX.utils.aoa_to_sheet(distributionData);
+    XLSX.utils.book_append_sheet(wb, ws7, 'Distribución A-M');
+
+    const ws8 = XLSX.utils.aoa_to_sheet(healthData);
+    XLSX.utils.book_append_sheet(wb, ws8, 'Índices Salud');
+
+    const ws9 = XLSX.utils.aoa_to_sheet(performanceData);
+    XLSX.utils.book_append_sheet(wb, ws9, 'Rendimiento');
+
+    // Save file
+    XLSX.writeFile(wb, `Informe_Completo_${client.name.replace(/\s+/g, '_')}_${currentRecord.date}.xlsx`);
+};
+
 
 const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) => {
     const [view, setView] = useState<ViewMode>('list');
@@ -317,10 +586,97 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
         { name: 'Pierna', val: d?.skinfolds.calf || 0 },
     ];
 
-    // --- ACTIONS (Unchanged) ---
+    // --- ACTIONS ---
     const handleSendMail = () => { if (selectedClient) alert(`Enviando informe por correo a: ${selectedClient.email || 'correo@cliente.com'}`); };
-    const handleExportPDF = () => { if (selectedClient) alert(`Generando PDF profesional...`); };
-    const handleExportExcel = () => { if (selectedClient) alert(`Generando Excel detallado...`); };
+    
+    const handleExportPDF = () => {
+        if (!selectedClient || !currentRecord) {
+            alert('No hay datos para exportar');
+            return;
+        }
+
+        const exportData: ExportData = {
+            client: selectedClient,
+            currentRecord,
+            prevRecord,
+            somato,
+            bodyFatPerc,
+            fatMass,
+            muscleMass,
+            boneMass,
+            armCorr,
+            thighCorr,
+            calfCorr,
+            sum6,
+            sum8,
+            adiposeMuscleIndex,
+            muscleBoneIndex,
+            bsa,
+            ipc,
+            cormic,
+            manouvrier,
+            relativeSpan,
+            conicityIndex,
+            bmr,
+            tdee,
+            zArmCorr,
+            zThighCorr,
+            zCalfCorr,
+            adiposeSuperior,
+            adiposeCentral,
+            adiposeInferior,
+            armPerc,
+            thighPerc,
+            calfPerc,
+        };
+
+        exportToPDF(exportData);
+    };
+
+    const handleExportExcel = () => {
+        if (!selectedClient || !currentRecord) {
+            alert('No hay datos para exportar');
+            return;
+        }
+
+        const exportData: ExportData = {
+            client: selectedClient,
+            currentRecord,
+            prevRecord,
+            somato,
+            bodyFatPerc,
+            fatMass,
+            muscleMass,
+            boneMass,
+            armCorr,
+            thighCorr,
+            calfCorr,
+            sum6,
+            sum8,
+            adiposeMuscleIndex,
+            muscleBoneIndex,
+            bsa,
+            ipc,
+            cormic,
+            manouvrier,
+            relativeSpan,
+            conicityIndex,
+            bmr,
+            tdee,
+            zArmCorr,
+            zThighCorr,
+            zCalfCorr,
+            adiposeSuperior,
+            adiposeCentral,
+            adiposeInferior,
+            armPerc,
+            thighPerc,
+            calfPerc,
+        };
+
+        exportToExcel(exportData);
+    };
+    
     const handleUploadClick = () => { fileInputRef.current?.click(); };
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -586,7 +942,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="w-full lg:w-[400px] border-l border-input-border dark:border-white/5 bg-gray-50/50 dark:bg-black/10 p-4">
+                                <div id={`zscore-${section.id}`} className="w-full lg:w-[400px] border-l border-input-border dark:border-white/5 bg-gray-50/50 dark:bg-black/10 p-4">
                                     <h4 className="text-xs font-bold uppercase text-blue-600 dark:text-blue-400 mb-3 text-center">Escore Z (Proporcionalidad)</h4>
                                     <div className="flex justify-between text-[10px] text-gray-400 px-12 mb-1"><span>-4</span><span>0</span><span>+4</span></div>
                                     <div className="flex flex-col">{section.metrics.map(metric => { const val = getMetricValue(currentRecord, section.id, metric.id); if (val === 0) return null; return <ZScoreRow key={metric.id} label={metric.label} value={val} metricId={metric.id} />; })}</div>
@@ -597,7 +953,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
 
                     {/* --- SECTION 2: SOMATOTYPE & BODY COMPOSITION --- */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-white/5 shadow-sm p-0 overflow-hidden flex flex-col h-full">
+                        <div id="somatotype-chart" className="bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-white/5 shadow-sm p-0 overflow-hidden flex flex-col h-full">
                             <div className="bg-primary text-white p-3 font-bold px-5">Somatotipo (Heath-Carter)</div>
                             <div className="p-5 flex flex-col items-center justify-center flex-1">
                                 <div className="w-full max-w-[400px] aspect-square relative">
@@ -625,7 +981,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-white/5 shadow-sm overflow-hidden flex flex-col h-full">
+                        <div id="somatotype-interpretation" className="bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-white/5 shadow-sm overflow-hidden flex flex-col h-full">
                             <div className="bg-white dark:bg-surface-dark p-3 border-b border-gray-200 dark:border-gray-700 font-bold px-5">Interpretación</div>
                             <div className="p-0 flex-1 overflow-x-auto">
                                 <table className="w-full text-sm h-full">
@@ -638,11 +994,11 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                             </div>
                         </div>
 
-                        <div className="col-span-1 lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-white/5 shadow-sm p-0 overflow-hidden">
+                        <div id="distribution-chart" className="col-span-1 lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-white/5 shadow-sm p-0 overflow-hidden">
                             <div className="bg-blue-600 text-white p-3 font-bold px-5">Distribución Adiposo-Muscular</div>
                             <div className="p-6 flex flex-col md:flex-row gap-8 items-center">
                                 {/* Bar Chart Section */}
-                                <div className="flex-1 w-full h-[350px] min-h-[350px]">
+                                <div id="bar-chart" className="flex-1 w-full h-[350px] min-h-[350px]">
                                     <h4 className="text-sm font-bold text-center mb-4 text-gray-500">Perímetros: Total vs Corregido (cm)</h4>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart layout="vertical" data={barChartData} margin={{ top: 20, right: 30, left: 40, bottom: 20 }}>
@@ -657,7 +1013,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                                     </ResponsiveContainer>
                                 </div>
                                 {/* Muscle Man Section */}
-                                <div className="w-full md:w-[400px] relative bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col items-center p-4">
+                                <div id="body-distribution" className="w-full md:w-[400px] relative bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col items-center p-4">
                                     <div className="flex justify-between w-full mb-2 font-bold text-sm border-b border-gray-100 pb-2"><span className="text-blue-600">Masa Adiposa</span><span className="text-blue-800">Masa Muscular</span></div>
                                     <div className="relative w-full h-[400px]">
                                         {/* Gender Neutral Anatomical Illustration */}
@@ -716,7 +1072,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                                         </div>
                                     </div>
                                 </div>
-                                <div className="h-[250px] w-full">
+                                <div id="skinfolds-chart" className="h-[250px] w-full">
                                     <h4 className="text-center font-bold text-sm mb-4">Perfil de pliegues (mm)</h4>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={skinfoldsChartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
@@ -770,7 +1126,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                     </div>
 
                     {/* --- SECTION: ÍNDICES DE SALUD (TRAFFIC LIGHT) (UPDATED) --- */}
-                    <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-white/5 shadow-sm overflow-hidden">
+                    <div id="health-indicators" className="bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-white/5 shadow-sm overflow-hidden">
                         <div className="bg-blue-600 text-white p-2 font-bold px-5">Índices de salud</div>
                         <div className="p-0 overflow-x-auto">
                             <div className="flex">

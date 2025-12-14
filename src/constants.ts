@@ -121,7 +121,7 @@ export const MOCK_HISTORY: Record<string, MeasurementRecord[]> = {
       id: 'm-2',
       clientId: 'C-1024',
       date: '2024-04-15', // Current
-      evaluator: 'Dr. Lucha',
+      evaluator: 'Luciana Burgos ISAK Nivel 1',
       data: {
         basic: { mass: 78.5, stature: 178, sitting_height: 92, arm_span: 180 },
         skinfolds: { triceps: 11, subscapular: 12, biceps: 4, iliac_crest: 15, supraspinale: 9, abdominal: 18, thigh: 10, calf: 6 },
@@ -133,7 +133,7 @@ export const MOCK_HISTORY: Record<string, MeasurementRecord[]> = {
       id: 'm-1',
       clientId: 'C-1024',
       date: '2024-01-15', // Previous
-      evaluator: 'Dr. Lucha',
+      evaluator: 'Luciana Burgos ISAK Nivel 1',
       data: {
         basic: { mass: 81.0, stature: 178, sitting_height: 92, arm_span: 180 },
         skinfolds: { triceps: 14, subscapular: 15, biceps: 5, iliac_crest: 19, supraspinale: 12, abdominal: 22, thigh: 12, calf: 8 },
