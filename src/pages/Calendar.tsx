@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Appointment } from '../types';
+import AppointmentModal from '../components/AppointmentModal';
 
 declare var gapi: any;
 declare var google: any;
@@ -42,6 +43,10 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
     // Date Management - Default to Today
     const [currentDate, setCurrentDate] = useState(new Date());
     const [showConfigModal, setShowConfigModal] = useState(false);
+
+    // Appointment Modal States
+    const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+    const [appointmentModalData, setAppointmentModalData] = useState<{ date?: Date; time?: string }>({});
 
     // Calculate start of current week (Sunday)
     const currentWeekStart = useMemo(() => {
@@ -341,6 +346,54 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
         } else {
             return `${monthNames[start.getMonth()]} ${start.getDate()} - ${monthNames[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
         }
+    };
+
+    // Appointment Modal Handlers
+    const handleOpenAppointmentModal = (date?: Date, time?: string) => {
+        setAppointmentModalData({ date, time });
+        setShowAppointmentModal(true);
+    };
+
+    const handleSaveAppointment = (appointmentData: {
+        clientName: string;
+        email?: string;
+        type: string;
+        date: string;
+        startTime: string;
+        endTime: string;
+        notes?: string;
+    }) => {
+        // Parse date and time
+        const [year, month, day] = appointmentData.date.split('-').map(Number);
+        const [startHour, startMinute] = appointmentData.startTime.split(':').map(Number);
+        const [endHour, endMinute] = appointmentData.endTime.split(':').map(Number);
+
+        const start = new Date(year, month - 1, day, startHour, startMinute);
+        const end = new Date(year, month - 1, day, endHour, endMinute);
+
+        // Create new event
+        const newEvent: CalendarEvent = {
+            id: `local-${Date.now()}`,
+            title: `${appointmentData.clientName} - ${appointmentData.type}`,
+            start,
+            end,
+            description: appointmentData.notes || appointmentData.type,
+            colorClass: 'bg-primary/10 border-l-4 border-primary text-text-dark dark:text-white',
+            type: 'local',
+            email: appointmentData.email,
+        };
+
+        // Add to events
+        setEvents(prev => [...prev, newEvent]);
+        
+        console.log('Nuevo turno agendado:', newEvent);
+        // TODO: Aquí se podría hacer una llamada a la API para guardar el turno
+    };
+
+    const handleClickEmptySlot = (columnDate: Date, hour: number) => {
+        // Solo abrir modal si el click es en un espacio vacío
+        const timeString = `${String(hour).padStart(2, '0')}:00`;
+        handleOpenAppointmentModal(columnDate, timeString);
     };
 
 
@@ -724,14 +777,29 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                                                 {(viewMode === 'week' ? weekDays : [currentDate]).map((columnDate, colIndex) => {
                                                     const colEvents = events.filter(e => isSameDay(e.start, columnDate));
                                                     return (
-                                                        <div key={colIndex} className="relative h-full pointer-events-auto hover:bg-black/5 transition-colors">
+                                                        <div 
+                                                            key={colIndex} 
+                                                            className="relative h-full pointer-events-auto hover:bg-black/5 transition-colors cursor-pointer group/column"
+                                                            onClick={(e) => {
+                                                                // Si el click no fue en un evento, calcular la hora clickeada
+                                                                if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.event-item') === null) {
+                                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                                    const clickY = e.clientY - rect.top;
+                                                                    const totalMinutes = Math.floor((clickY / 80) * 60);
+                                                                    const hour = Math.floor(totalMinutes / 60) + 6; // +6 porque empieza a las 6am
+                                                                    const minute = Math.floor((totalMinutes % 60) / 15) * 15; // Redondear a 15 min
+                                                                    const timeString = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+                                                                    handleOpenAppointmentModal(columnDate, timeString);
+                                                                }
+                                                            }}
+                                                        >
                                                             {colEvents.map(event => {
                                                                 const { top, height } = getEventPosition(event);
                                                                 return (
                                                                     <div
                                                                         key={event.id}
-                                                                        onClick={() => setSelectedEvent(event)}
-                                                                        className={`absolute left-1 right-2 rounded-md p-2 hover:brightness-95 transition-all cursor-pointer group shadow-sm z-10 overflow-hidden border-l-4 ${event.colorClass || 'bg-blue-100 border-blue-500 text-blue-900'}`}
+                                                                        onClick={(e) => { e.stopPropagation(); setSelectedEvent(event); }}
+                                                                        className={`event-item absolute left-1 right-2 rounded-md p-2 hover:brightness-95 transition-all cursor-pointer group shadow-sm z-10 overflow-hidden border-l-4 ${event.colorClass || 'bg-blue-100 border-blue-500 text-blue-900'}`}
                                                                         style={{ top: `${top}px`, height: `${height}px` }}
                                                                         title={`${event.title}\n${event.description}`}
                                                                     >
@@ -780,7 +848,16 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                                         const dayEvents = events.filter(e => isSameDay(e.start, d));
 
                                         return (
-                                            <div key={i} className={`bg-background-light dark:bg-surface-dark p-2 flex flex-col gap-1 min-h-[100px] border-r border-b border-input-border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${!isCurrentMonth ? 'opacity-40 bg-gray-50 dark:bg-black/20' : ''}`}>
+                                            <div 
+                                                key={i} 
+                                                className={`bg-background-light dark:bg-surface-dark p-2 flex flex-col gap-1 min-h-[100px] border-r border-b border-input-border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer ${!isCurrentMonth ? 'opacity-40 bg-gray-50 dark:bg-black/20' : ''}`}
+                                                onClick={(e) => {
+                                                    // Si el click no fue en un evento, abrir modal para este día
+                                                    if ((e.target as HTMLElement).closest('.month-event-item') === null) {
+                                                        handleOpenAppointmentModal(d, '09:00');
+                                                    }
+                                                }}
+                                            >
                                                 <div className="flex justify-between items-start">
                                                     <span className={`text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-primary text-text-dark' : 'text-text-dark dark:text-white'}`}>
                                                         {d.getDate()}
@@ -792,7 +869,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                                                         <div
                                                             key={ev.id}
                                                             onClick={(e) => { e.stopPropagation(); setSelectedEvent(ev); }}
-                                                            className={`text-[9px] p-1 rounded border-l-2 cursor-pointer truncate hover:brightness-95 transition ${ev.colorClass ? ev.colorClass.split(' ')[0] + ' ' + ev.colorClass.split(' ')[2] : 'bg-gray-200 border-gray-400 text-gray-700'}`}
+                                                            className={`month-event-item text-[9px] p-1 rounded border-l-2 cursor-pointer truncate hover:brightness-95 transition ${ev.colorClass ? ev.colorClass.split(' ')[0] + ' ' + ev.colorClass.split(' ')[2] : 'bg-gray-200 border-gray-400 text-gray-700'}`}
                                                             title={`${ev.title} (${ev.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`}
                                                         >
                                                             <span className="font-bold mr-1">{ev.start.getHours()}:{(ev.start.getMinutes() < 10 ? '0' : '') + ev.start.getMinutes()}</span>
@@ -869,6 +946,27 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                     </div>
                 )
             }
+
+            {/* Floating Action Button */}
+            <button
+                onClick={() => handleOpenAppointmentModal()}
+                className="fixed bottom-8 right-8 p-4 bg-primary text-text-dark rounded-full shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-110 transition-all duration-200 z-40 group"
+                title="Agendar Nuevo Turno"
+            >
+                <span className="material-symbols-outlined text-3xl">add</span>
+                <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-text-dark text-white px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    Nuevo Turno
+                </span>
+            </button>
+
+            {/* Appointment Modal */}
+            <AppointmentModal
+                isOpen={showAppointmentModal}
+                onClose={() => setShowAppointmentModal(false)}
+                onSave={handleSaveAppointment}
+                initialDate={appointmentModalData.date}
+                initialTime={appointmentModalData.time}
+            />
         </div>
     );
 };

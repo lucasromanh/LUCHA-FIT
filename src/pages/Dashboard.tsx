@@ -226,7 +226,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-text-dark dark:text-white">Accesos Rápidos</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <button onClick={() => onNavigate('clients')} className="flex flex-col items-start gap-3 p-5 rounded-xl border border-input-border dark:border-gray-700 bg-surface-light dark:bg-surface-dark hover:border-primary dark:hover:border-primary transition-all shadow-sm hover:shadow-md group text-left">
                 <div className="p-3 rounded-lg bg-[#e7f3eb] dark:bg-primary/20 text-primary group-hover:bg-primary group-hover:text-black transition-colors">
                   <span className="material-symbols-outlined">person_add</span>
@@ -243,6 +243,15 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <div>
                   <h3 className="font-bold text-text-dark dark:text-white">Nueva Medición</h3>
                   <p className="text-sm text-text-muted dark:text-gray-400 mt-1">Iniciar antropometría</p>
+                </div>
+              </button>
+              <button onClick={() => onNavigate('calendar')} className="flex flex-col items-start gap-3 p-5 rounded-xl border border-input-border dark:border-gray-700 bg-surface-light dark:bg-surface-dark hover:border-primary dark:hover:border-primary transition-all shadow-sm hover:shadow-md group text-left">
+                <div className="p-3 rounded-lg bg-[#e7f3eb] dark:bg-primary/20 text-primary group-hover:bg-primary group-hover:text-black transition-colors">
+                  <span className="material-symbols-outlined">event_available</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-text-dark dark:text-white">Agendar Turno</h3>
+                  <p className="text-sm text-text-muted dark:text-gray-400 mt-1">Programar cita</p>
                 </div>
               </button>
               <button onClick={() => onNavigate('calendar')} className="flex flex-col items-start gap-3 p-5 rounded-xl border border-input-border dark:border-gray-700 bg-surface-light dark:bg-surface-dark hover:border-primary dark:hover:border-primary transition-all shadow-sm hover:shadow-md group text-left">
