@@ -1,0 +1,40 @@
+# LuchaFit Backend - .htaccess
+
+# Configuración para Hostinger
+
+# Habilitar RewriteEngine
+
+RewriteEngine On
+
+# Configuración CORS (permite peticiones desde el frontend)
+
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+</IfModule>
+
+# Manejar peticiones OPTIONS (pre-flight CORS)
+
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.\*)$ $1 [R=200,L]
+
+# Proteger archivos sensibles
+
+<FilesMatch "^(db\.php|config\.php)$">
+Order allow,deny
+Deny from all
+</FilesMatch>
+
+# Directorio por defecto
+
+DirectoryIndex index.php
+
+# Configuración PHP (si el servidor lo permite)
+
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    php_value max_execution_time 300
+    php_value memory_limit 256M
+</IfModule>

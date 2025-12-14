@@ -8,6 +8,8 @@ import * as XLSX from 'xlsx';
 import { PrintableReport } from '../components/PrintableReport';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { createRoot } from 'react-dom/client';
+import { useMeasurements } from '../hooks/useMeasurements';
+import { useClients } from '../hooks/useClients';
 
 type ViewMode = 'list' | 'details' | 'new';
 
@@ -394,10 +396,21 @@ const exportToExcel = (data: ExportData) => {
 
 
 const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) => {
+    // Backend integration
+    const { clients: clientsList } = useClients();
+
     const [view, setView] = useState<ViewMode>('list');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
+    // Hook para mediciones - debe ir DESPUÉS de selectedClient
+    const { 
+        measurements: clientMeasurements, 
+        loading: measurementsLoading, 
+        error: measurementsError,
+        createMeasurement 
+    } = useMeasurements(selectedClient?.id);
 
     // New Measurement State
     const [measurements, setMeasurements] = useState<MeasurementValues>({});
@@ -436,8 +449,8 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
     };
 
     const loadClientData = (clientId: string) => {
-        // Mock loading data from DB
-        const history = MOCK_HISTORY[clientId] || [];
+        // Cargar datos reales desde el backend
+        const history = clientMeasurements || [];
         if (history.length > 0) {
             setCurrentRecord(history[0]);
             if (history.length > 1) {
@@ -693,14 +706,13 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
     };
 
     const filteredClients = useMemo(() => {
-        // Load clients from LocalStorage to include new creations, fallback to constant
-        const saved = localStorage.getItem('clients_data');
-        const sourceData = saved ? JSON.parse(saved) : CLIENTS;
+        // Usar clientes del backend en lugar de localStorage
+        const sourceData = clientsList.length > 0 ? clientsList : CLIENTS;
 
         if (!searchTerm) return sourceData;
         const lowerTerm = searchTerm.toLowerCase();
         return sourceData.filter((c: Client) => c.name.toLowerCase().includes(lowerTerm) || c.id.toLowerCase().includes(lowerTerm));
-    }, [searchTerm]);
+    }, [searchTerm, clientsList]);
 
     const handleSelectClientForReport = (client: Client) => { setSelectedClient(client); loadClientData(client.id); setView('details'); };
     const handleSelectClientForNew = (client: Client) => { setSelectedClient(client); initNewForm(); setView('new'); };
@@ -750,7 +762,58 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
         return ((v1 + v2) / 2).toFixed(2);
     };
 
-    const validateAndSaveNew = () => { alert("Medición guardada correctamente."); handleBack(); };
+    const validateAndSaveNew = async () => {
+        if (!selectedClient) return;
+
+        try {
+            // Construir objeto AnthropometricData desde measurements
+            const anthroData: AnthropometricData = {
+                basic: {
+                    mass: parseFloat(calculateFinalValue('mass', 'basic')) || 0,
+                    stature: parseFloat(calculateFinalValue('stature', 'basic')) || 0,
+                    sitting_height: parseFloat(calculateFinalValue('sitting_height', 'basic')) || 0,
+                    arm_span: parseFloat(calculateFinalValue('arm_span', 'basic')) || 0
+                },
+                skinfolds: {
+                    triceps: parseFloat(calculateFinalValue('triceps', 'skinfolds')) || 0,
+                    subscapular: parseFloat(calculateFinalValue('subscapular', 'skinfolds')) || 0,
+                    biceps: parseFloat(calculateFinalValue('biceps', 'skinfolds')) || 0,
+                    iliac_crest: parseFloat(calculateFinalValue('iliac_crest', 'skinfolds')) || 0,
+                    supraspinale: parseFloat(calculateFinalValue('supraspinale', 'skinfolds')) || 0,
+                    abdominal: parseFloat(calculateFinalValue('abdominal', 'skinfolds')) || 0,
+                    thigh: parseFloat(calculateFinalValue('thigh', 'skinfolds')) || 0,
+                    calf: parseFloat(calculateFinalValue('calf', 'skinfolds')) || 0
+                },
+                girths: {
+                    arm_relaxed: parseFloat(calculateFinalValue('arm_relaxed', 'girths')) || 0,
+                    arm_flexed: parseFloat(calculateFinalValue('arm_flexed', 'girths')) || 0,
+                    waist: parseFloat(calculateFinalValue('waist', 'girths')) || 0,
+                    hips: parseFloat(calculateFinalValue('hips', 'girths')) || 0,
+                    mid_thigh: parseFloat(calculateFinalValue('mid_thigh', 'girths')) || 0,
+                    calf_girth: parseFloat(calculateFinalValue('calf_girth', 'girths')) || 0
+                },
+                breadths: {
+                    humerus: parseFloat(calculateFinalValue('humerus', 'breadths')) || 0,
+                    bistyloid: parseFloat(calculateFinalValue('bistyloid', 'breadths')) || 0,
+                    femur: parseFloat(calculateFinalValue('femur', 'breadths')) || 0
+                }
+            };
+
+            // Crear medición en el backend
+            await createMeasurement({
+                clientId: selectedClient.id,
+                evaluator: PROFESSIONAL_PROFILE.name,
+                date: new Date().toISOString().split('T')[0],
+                data: anthroData
+            });
+
+            alert("Medición guardada correctamente en la base de datos.");
+            handleBack();
+        } catch (error) {
+            console.error('Error al guardar medición:', error);
+            alert('Error al guardar la medición. Por favor, intenta nuevamente.');
+        }
+    };
 
 
 

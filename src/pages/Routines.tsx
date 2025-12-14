@@ -2,10 +2,15 @@ import React, { useState, useMemo } from 'react';
 import { CLIENTS, MOCK_ROUTINES, PROFESSIONAL_PROFILE } from '../constants';
 import { Client, Routine, RoutineSession, RoutineExercise, ExerciseBlock } from '../types';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { useClients } from '../hooks/useClients';
+import { routinesApi } from '../services/api';
 
 type RoutineView = 'list' | 'client_details' | 'editor';
 
 const Routines: React.FC = () => {
+    // Backend integration
+    const { clients: clientsList } = useClients();
+
     const [view, setView] = useState<RoutineView>('list');
     const [searchTerm, setSearchTerm] = useState('');
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; routineId: string | null; routineTitle: string }>({ 
@@ -25,14 +30,13 @@ const Routines: React.FC = () => {
 
     // --- VIEW 1: CLIENT LIST ---
     const filteredClients = useMemo(() => {
-        // Load clients from LocalStorage to include new creations, fallback to constant
-        const saved = localStorage.getItem('clients_data');
-        const sourceData = saved ? JSON.parse(saved) : CLIENTS;
+        // Usar clientes del backend en lugar de localStorage
+        const sourceData = clientsList.length > 0 ? clientsList : CLIENTS;
 
         if (!searchTerm) return sourceData;
         const lowerTerm = searchTerm.toLowerCase();
         return sourceData.filter((c: Client) => c.name.toLowerCase().includes(lowerTerm) || c.id.toLowerCase().includes(lowerTerm));
-    }, [searchTerm]);
+    }, [searchTerm, clientsList]);
 
     const handleSelectClient = (client: Client) => {
         setSelectedClient(client);

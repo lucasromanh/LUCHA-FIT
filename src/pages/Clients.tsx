@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { CLIENTS } from '../constants';
 import { Client } from '../types';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { useClients } from '../hooks/useClients';
 
 // --- DATA CONSTANTS ---
 
@@ -29,18 +30,10 @@ const parseDateStr = (dateStr: string) => {
 };
 
 const Clients: React.FC = () => {
+  // --- BACKEND INTEGRATION ---
+  const { clients: clientsData, loading, error, createClient, updateClient, deleteClient } = useClients();
+
   // --- STATE ---
-  // Initialize from LocalStorage if available, else use default CLIENTS
-  const [clientsData, setClientsData] = useState<Client[]>(() => {
-    const saved = localStorage.getItem('clients_data');
-    return saved ? JSON.parse(saved) : CLIENTS;
-  });
-
-  // Persist to LocalStorage whenever clientsData changes
-  useEffect(() => {
-    localStorage.setItem('clients_data', JSON.stringify(clientsData));
-  }, [clientsData]);
-
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -164,9 +157,13 @@ const Clients: React.FC = () => {
     });
   };
 
-  const confirmDeleteAction = () => {
+  const confirmDeleteAction = async () => {
     if (confirmDelete.clientId) {
-      setClientsData(prev => prev.filter(c => c.id !== confirmDelete.clientId));
+      try {
+        await deleteClient(confirmDelete.clientId);
+      } catch (err) {
+        console.error('Error al eliminar cliente:', err);
+      }
     }
     setConfirmDelete({ isOpen: false, clientId: null, clientName: '' });
   };
@@ -194,76 +191,56 @@ const Clients: React.FC = () => {
   }, [sportSearch]);
 
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const todayStr = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '');
     const fullName = `${formData.nombre} ${formData.apellido}`;
 
-    if (editingClientId) {
-      setClientsData(prev => prev.map(c => c.id === editingClientId ? {
-        ...c,
-        name: fullName,
-        email: formData.email,
-        image: (formData.foto as string) || c.image,
-        age: new Date().getFullYear() - new Date(formData.nacimiento).getFullYear() || c.age,
-        gender: formData.sexo as any,
-        weight: parseFloat(formData.masaHabitual) || c.weight,
-        lastVisit: todayStr,
-        // Update new fields
-        phone: formData.telefono,
-        address: formData.direccion,
-        birthDate: formData.nacimiento,
-        race: formData.raza,
-        handDominance: formData.mano,
-        footDominance: formData.pie,
-        activityType: formData.tipoActividad,
-        activityIntensity: formData.intensidadActividad,
-        activityFrequency: formData.frecuenciaActividad,
-        competitionLevel: formData.nivelCompetencia,
-        sports: formData.deportes,
-        position: formData.posicion,
-        massMax: parseFloat(formData.masaMax),
-        massMin: parseFloat(formData.masaMin),
-        nutritionist: formData.nutricionista,
-        pathologies: formData.patologias,
-        surgeries: formData.cirugias,
-        medication: formData.medicacion
-      } : c));
-    } else {
-      const newClient: Client = {
-        id: `C-${Math.floor(Math.random() * 10000)}`,
-        name: fullName,
-        email: formData.email,
-        image: (formData.foto as string) || '', // Save valid image data
-        age: new Date().getFullYear() - new Date(formData.nacimiento).getFullYear() || 25,
-        gender: formData.sexo as any,
-        weight: parseFloat(formData.masaHabitual) || 70,
-        weightDiff: 0,
-        lastVisit: todayStr, status: 'Activo', goal: 'Evaluación', bodyFat: 0,
-        // Save new fields
-        phone: formData.telefono,
-        address: formData.direccion,
-        birthDate: formData.nacimiento,
-        race: formData.raza,
-        handDominance: formData.mano,
-        footDominance: formData.pie,
-        activityType: formData.tipoActividad,
-        activityIntensity: formData.intensidadActividad,
-        activityFrequency: formData.frecuenciaActividad,
-        competitionLevel: formData.nivelCompetencia,
-        sports: formData.deportes,
-        position: formData.posicion,
-        massMax: parseFloat(formData.masaMax),
-        massMin: parseFloat(formData.masaMin),
-        nutritionist: formData.nutricionista,
-        pathologies: formData.patologias,
-        surgeries: formData.cirugias,
-        medication: formData.medicacion
-      };
-      setClientsData(prev => [newClient, ...prev]);
+    try {
+      if (editingClientId) {
+        // Actualizar cliente existente
+        const clientToUpdate = clientsData.find(c => c.id === editingClientId);
+        if (!clientToUpdate) return;
+
+        await updateClient(editingClientId, {
+          name: fullName,
+          email: formData.email,
+          age: new Date().getFullYear() - new Date(formData.nacimiento).getFullYear() || clientToUpdate.age,
+          gender: formData.sexo as any,
+          weight: parseFloat(formData.masaHabitual) || clientToUpdate.weight,
+          phone: formData.telefono,
+          birth_date: formData.nacimiento
+        } as any);
+      } else {
+        // Crear nuevo cliente
+        const newClientData: any = {
+          name: fullName,
+          email: formData.email,
+          phone: formData.telefono,
+          age: new Date().getFullYear() - new Date(formData.nacimiento).getFullYear() || 25,
+          gender: formData.sexo as any,
+          weight: parseFloat(formData.masaHabitual) || 70,
+          birth_date: formData.nacimiento,
+          status: 'Activo'
+        };
+
+        // Manejar imagen si existe
+        let imageFile: File | undefined;
+        if (formData.foto && typeof formData.foto === 'string' && formData.foto.startsWith('data:')) {
+          // Convertir base64 a File
+          const response = await fetch(formData.foto);
+          const blob = await response.blob();
+          imageFile = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
+        }
+
+        await createClient(newClientData, imageFile);
+      }
+
+      setIsModalOpen(false);
+      setFormData(initialFormState);
+    } catch (err) {
+      console.error('Error al guardar cliente:', err);
     }
-    setIsModalOpen(false);
-    setFormData(initialFormState);
   };
 
   // --- RENDER HELPERS ---
@@ -611,47 +588,63 @@ const Clients: React.FC = () => {
 
       {/* Table */}
       <div className="bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl shadow-sm overflow-hidden min-h-[400px]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-100/80 dark:bg-gray-800 border-b border-input-border dark:border-gray-700">
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-text-muted">Paciente</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-text-muted">Edad / Sexo</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-text-muted">Estado</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-text-muted text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-input-border dark:divide-gray-700">
-              {paginatedClients.map(client => (
-                <tr key={client.id} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      {client.image ? (
-                        <img src={client.image} alt={client.name} className="size-10 rounded-full object-cover border border-gray-200" />
-                      ) : (
-                        <div className="size-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-primary font-bold">{client.name.substring(0, 2)}</div>
-                      )}
-                      <div><p className="font-bold text-text-dark dark:text-white">{client.name}</p><p className="text-xs text-text-muted">{client.id}</p></div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-text-dark dark:text-white">{client.age} años - {client.gender === 'Masculino' ? 'M' : 'F'}</td>
-                  <td className="px-6 py-4">{renderStatusBadge(client.status)}</td>
-                  <td className="px-6 py-4 text-right flex justify-end gap-2">
-                    <button onClick={() => handleView(client)} className="p-2 text-gray-500 hover:text-primary transition-colors" title="Ver Ficha">
-                      <span className="material-symbols-outlined">visibility</span>
-                    </button>
-                    <button onClick={() => handleEdit(client)} className="p-2 text-gray-500 hover:text-blue-500 transition-colors" title="Editar">
-                      <span className="material-symbols-outlined">edit</span>
-                    </button>
-                    <button onClick={() => handleDelete(client.id)} className="p-2 text-gray-500 hover:text-red-500 transition-colors" title="Eliminar">
-                      <span className="material-symbols-outlined">delete</span>
-                    </button>
-                  </td>
+        {loading ? (
+          <div className="flex items-center justify-center h-[400px]">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-sm text-text-muted">Cargando clientes...</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-[400px]">
+            <div className="flex flex-col items-center gap-3 text-red-500">
+              <span className="material-symbols-outlined text-5xl">error</span>
+              <p className="text-sm">{error}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-100/80 dark:bg-gray-800 border-b border-input-border dark:border-gray-700">
+                  <th className="px-6 py-4 text-xs font-semibold uppercase text-text-muted">Paciente</th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase text-text-muted">Edad / Sexo</th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase text-text-muted">Estado</th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase text-text-muted text-right">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-input-border dark:divide-gray-700">
+                {paginatedClients.map(client => (
+                  <tr key={client.id} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {client.image ? (
+                          <img src={client.image} alt={client.name} className="size-10 rounded-full object-cover border border-gray-200" />
+                        ) : (
+                          <div className="size-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-primary font-bold">{client.name.substring(0, 2)}</div>
+                        )}
+                        <div><p className="font-bold text-text-dark dark:text-white">{client.name}</p><p className="text-xs text-text-muted">{client.id}</p></div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-text-dark dark:text-white">{client.age} años - {client.gender === 'Masculino' ? 'M' : 'F'}</td>
+                    <td className="px-6 py-4">{renderStatusBadge(client.status)}</td>
+                    <td className="px-6 py-4 text-right flex justify-end gap-2">
+                      <button onClick={() => handleView(client)} className="p-2 text-gray-500 hover:text-primary transition-colors" title="Ver Ficha">
+                        <span className="material-symbols-outlined">visibility</span>
+                      </button>
+                      <button onClick={() => handleEdit(client)} className="p-2 text-gray-500 hover:text-blue-500 transition-colors" title="Editar">
+                        <span className="material-symbols-outlined">edit</span>
+                      </button>
+                      <button onClick={() => handleDelete(client.id)} className="p-2 text-gray-500 hover:text-red-500 transition-colors" title="Eliminar">
+                        <span className="material-symbols-outlined">delete</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Pagination Controls */}

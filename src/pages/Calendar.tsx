@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Appointment } from '../types';
 import AppointmentModal from '../components/AppointmentModal';
+import { appointmentsApi } from '../services/api';
 
 declare var gapi: any;
 declare var google: any;

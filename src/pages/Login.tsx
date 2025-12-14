@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ASSETS } from '../constants';
+import { authApi } from '../services/api';
 
 interface LoginProps {
   onLogin: () => void;
@@ -9,10 +10,33 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await authApi.login(email, password);
+      
+      if (response.success && response.data) {
+        // Guardar token y usuario en localStorage
+        localStorage.setItem('luchafit_token', response.data.token);
+        localStorage.setItem('luchafit_user', JSON.stringify(response.data.user));
+        
+        // Llamar al callback de login exitoso
+        onLogin();
+      } else {
+        setError(response.error || 'Credenciales incorrectas');
+      }
+    } catch (err) {
+      setError('Error de conexión con el servidor');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -85,6 +109,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
                 </div>
               </div>
 
+              {/* Error Message */}
+              {error && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-[20px]">error</span>
+                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+                </div>
+              )}
+
               {/* Extras */}
               <div className="flex flex-wrap items-center justify-between gap-y-2 mt-1">
                 <label className="flex items-center gap-2 cursor-pointer group">
@@ -97,9 +129,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="mt-4 flex w-full cursor-pointer items-center justify-center rounded-lg h-12 md:h-14 bg-primary hover:bg-primary-dark active:scale-[0.99] transition-all duration-200 text-[#0d1b12] text-base font-bold tracking-wide shadow-lg shadow-primary/20"
+                disabled={loading}
+                className="mt-4 flex w-full cursor-pointer items-center justify-center rounded-lg h-12 md:h-14 bg-primary hover:bg-primary-dark active:scale-[0.99] transition-all duration-200 text-[#0d1b12] text-base font-bold tracking-wide shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Entrar a la Plataforma
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                    Iniciando sesión...
+                  </span>
+                ) : (
+                  'Entrar a la Plataforma'
+                )}
               </button>
             </form>
 
