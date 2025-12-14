@@ -3,7 +3,7 @@
  * Servicio centralizado para todas las peticiones al backend
  */
 
-const API_BASE_URL = 'https://saltacoders.com/luchafit/api';
+const API_BASE_URL = 'https://luchafit.saltacoders.com/api';
 
 // Tipos de respuesta
 interface ApiResponse<T = any> {

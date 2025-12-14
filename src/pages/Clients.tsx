@@ -20,6 +20,7 @@ const ALL_SPORTS = Object.values(SPORTS_DATA).flat().sort();
 
 // helper for date sorting
 const parseDateStr = (dateStr: string) => {
+  if (!dateStr) return new Date(0).getTime();
   const months: { [key: string]: number } = {
     'Ene': 0, 'Feb': 1, 'Mar': 2, 'Abr': 3, 'May': 4, 'Jun': 5,
     'Jul': 6, 'Ago': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dic': 11
@@ -110,7 +111,8 @@ const Clients: React.FC = () => {
 
   // Simulate loading complex data from flat client object (In real app, fetch full profile)
   const loadClientData = (client: Client) => {
-    const [firstName, ...restName] = client.name.split(' ');
+    const nameParts = (client.name || '').split(' ');
+    const [firstName = '', ...restName] = nameParts;
     setFormData({
       // Personal
       nombre: firstName,

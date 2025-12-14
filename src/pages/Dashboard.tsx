@@ -6,6 +6,7 @@ interface DashboardProps {
   onNavigate: (page: string) => void;
   appointments?: Appointment[];
   onConfirmBooking?: (id: string) => void;
+  onRejectBooking?: (id: string) => Promise<boolean>;
   onRescheduleBooking?: (id: string, date: string, time: string) => void;
   onGoToReports?: (clientName: string, mode: 'new' | 'details') => void;
 }
@@ -14,6 +15,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onNavigate,
   appointments = [],
   onConfirmBooking,
+  onRejectBooking,
   onRescheduleBooking,
   onGoToReports
 }) => {
@@ -297,11 +299,24 @@ const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                       <div className="flex gap-2 w-full sm:w-auto">
                         <button
-                          onClick={() => {
-                            // Simple rejection mock - could be prop function
-                            if (window.confirm('¿Rechazar solicitud?')) {
-                              // In a real app, this would call a parent function to remove from state
-                              alert('Solicitud rechazada - Se enviaría mail de aviso (TODO)');
+                          onClick={async () => {
+                            if (onRejectBooking) {
+                              const success = await onRejectBooking(apt.id);
+                              if (success) {
+                                setNotification({
+                                  show: true,
+                                  message: '✓ Solicitud Rechazada',
+                                  subtext: `La solicitud de ${apt.clientName} ha sido cancelada`
+                                });
+                                setTimeout(() => setNotification(null), 3000);
+                              } else {
+                                setNotification({
+                                  show: true,
+                                  message: '✗ Error',
+                                  subtext: 'No se pudo rechazar la solicitud'
+                                });
+                                setTimeout(() => setNotification(null), 3000);
+                              }
                             }
                           }}
                           className="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center gap-2"

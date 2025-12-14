@@ -6,10 +6,9 @@ import { appointmentsApi } from '../services/api';
 declare var gapi: any;
 declare var google: any;
 
-// NOTE: Replace these with your actual Google Cloud credentials
-// Enable the Google Calendar API in your Google Cloud Console
-const CLIENT_ID = 'YOUR_CLIENT_ID';
-const API_KEY = 'YOUR_API_KEY';
+// Google Calendar API configuration (from environment variables)
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events.readonly';
 
@@ -355,7 +354,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
         setShowAppointmentModal(true);
     };
 
-    const handleSaveAppointment = (appointmentData: {
+    const handleSaveAppointment = async (appointmentData: {
         clientName: string;
         email?: string;
         type: string;
@@ -364,37 +363,81 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
         endTime: string;
         notes?: string;
     }) => {
-        // Parse date and time
-        const [year, month, day] = appointmentData.date.split('-').map(Number);
-        const [startHour, startMinute] = appointmentData.startTime.split(':').map(Number);
-        const [endHour, endMinute] = appointmentData.endTime.split(':').map(Number);
+        try {
+            // Guardar en la base de datos
+            const response = await appointmentsApi.create({
+                client_name: appointmentData.clientName,
+                email: appointmentData.email,
+                type: appointmentData.type,
+                date: appointmentData.date,
+                start_time: appointmentData.startTime,
+                end_time: appointmentData.endTime,
+                status: 'confirmed', // Desde el calendario profesional ya son confirmados
+                notes: appointmentData.notes
+            });
 
-        const start = new Date(year, month - 1, day, startHour, startMinute);
-        const end = new Date(year, month - 1, day, endHour, endMinute);
+            if (response.success) {
+                // Parse date and time para mostrar en el calendario
+                const [year, month, day] = appointmentData.date.split('-').map(Number);
+                const [startHour, startMinute] = appointmentData.startTime.split(':').map(Number);
+                const [endHour, endMinute] = appointmentData.endTime.split(':').map(Number);
 
-        // Create new event
-        const newEvent: CalendarEvent = {
-            id: `local-${Date.now()}`,
-            title: `${appointmentData.clientName} - ${appointmentData.type}`,
-            start,
-            end,
-            description: appointmentData.notes || appointmentData.type,
-            colorClass: 'bg-primary/10 border-l-4 border-primary text-text-dark dark:text-white',
-            type: 'local',
-            email: appointmentData.email,
-        };
+                const start = new Date(year, month - 1, day, startHour, startMinute);
+                const end = new Date(year, month - 1, day, endHour, endMinute);
 
-        // Add to events
-        setEvents(prev => [...prev, newEvent]);
-        
-        console.log('Nuevo turno agendado:', newEvent);
-        // TODO: Aquí se podría hacer una llamada a la API para guardar el turno
+                // Create new event con el ID real de la BD
+                const newEvent: CalendarEvent = {
+                    id: response.data.id,
+                    title: `${appointmentData.clientName} - ${appointmentData.type}`,
+                    start,
+                    end,
+                    description: appointmentData.notes || appointmentData.type,
+                    colorClass: 'bg-primary/10 border-l-4 border-primary text-text-dark dark:text-white',
+                    type: 'appointment',
+                    email: appointmentData.email,
+                };
+
+                // Add to events
+                setEvents(prev => [...prev, newEvent]);
+                
+                console.log('✓ Turno guardado en BD:', response.data.id);
+            } else {
+                console.error('Error al guardar turno:', response.error);
+                alert('Error al guardar el turno');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error de conexión al guardar el turno');
+        }
     };
 
     const handleClickEmptySlot = (columnDate: Date, hour: number) => {
         // Solo abrir modal si el click es en un espacio vacío
         const timeString = `${String(hour).padStart(2, '0')}:00`;
         handleOpenAppointmentModal(columnDate, timeString);
+    };
+
+    const handleDeleteEvent = async (eventId: string) => {
+        if (eventId.startsWith('google-')) {
+            alert('No se pueden eliminar eventos de Google Calendar desde aquí');
+            return;
+        }
+
+        try {
+            const response = await appointmentsApi.delete(eventId);
+            
+            if (response.success) {
+                // Eliminar del estado local
+                setEvents(prev => prev.filter(ev => ev.id !== eventId));
+                setSelectedEvent(null);
+                console.log('✓ Turno eliminado');
+            } else {
+                alert('Error al eliminar el turno');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error de conexión al eliminar el turno');
+        }
     };
 
 
@@ -939,9 +982,38 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                                 <button onClick={() => setSelectedEvent(null)} className="px-4 py-2 text-text-dark dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium">
                                     Cerrar
                                 </button>
-                                <button className="px-4 py-2 bg-primary text-text-dark font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
-                                    Editar
-                                </button>
+                                {selectedEvent.type !== 'google' && (
+                                    <>
+                                        <button 
+                                            onClick={() => {
+                                                if (window.confirm('¿Eliminar este turno?')) {
+                                                    handleDeleteEvent(selectedEvent.id);
+                                                }
+                                            }}
+                                            className="px-4 py-2 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+                                        >
+                                            Eliminar
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                // Extraer datos del evento para prellenar el modal
+                                                const titleParts = selectedEvent.title.split(' - ');
+                                                const clientName = titleParts[0] || '';
+                                                const type = titleParts[1] || selectedEvent.description || '';
+                                                
+                                                setAppointmentModalData({
+                                                    date: selectedEvent.start,
+                                                    time: selectedEvent.start.toTimeString().slice(0, 5)
+                                                });
+                                                setSelectedEvent(null);
+                                                setShowAppointmentModal(true);
+                                            }}
+                                            className="px-4 py-2 bg-primary text-text-dark font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+                                        >
+                                            Reprogramar
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

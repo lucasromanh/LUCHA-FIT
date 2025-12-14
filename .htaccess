@@ -1,24 +1,28 @@
 # LuchaFit Frontend - .htaccess
 # Este archivo va en /public_html/luchafit/.htaccess
 
+# DESHABILITAR CACHÉ TEMPORALMENTE
+<IfModule mod_headers.c>
+  Header set Cache-Control "no-cache, no-store, must-revalidate"
+  Header set Pragma "no-cache"
+  Header set Expires 0
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /luchafit/
-
-  # No reescribir archivos estáticos (JS, CSS, imágenes, fuentes)
-  RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$ [NC]
-  RewriteRule ^(.*)$ - [L]
+  RewriteBase /
 
   # No reescribir la carpeta API (backend)
-  RewriteCond %{REQUEST_URI} ^/luchafit/api/ [NC]
+  RewriteCond %{REQUEST_URI} ^/api/ [NC]
   RewriteRule ^(.*)$ - [L]
 
   # No reescribir archivos que existen físicamente
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
   
   # Redirigir todo lo demás al index.html (React Router - SPA)
-  RewriteRule ^(.*)$ /luchafit/index.html [L]
+  RewriteRule ^(.*)$ /index.html [L]
 </IfModule>
 
 # Cache control para assets

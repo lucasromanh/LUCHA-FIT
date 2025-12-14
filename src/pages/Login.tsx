@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ASSETS } from '../constants';
 import { authApi } from '../services/api';
 
@@ -10,8 +10,18 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Cargar email guardado al montar el componente
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('luchafit_saved_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +32,13 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
       const response = await authApi.login(email, password);
       
       if (response.success && response.data) {
+        // Guardar o eliminar email según checkbox
+        if (rememberMe) {
+          localStorage.setItem('luchafit_saved_email', email);
+        } else {
+          localStorage.removeItem('luchafit_saved_email');
+        }
+        
         // Guardar token y usuario en localStorage
         localStorage.setItem('luchafit_token', response.data.token);
         localStorage.setItem('luchafit_user', JSON.stringify(response.data.user));
@@ -120,7 +137,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
               {/* Extras */}
               <div className="flex flex-wrap items-center justify-between gap-y-2 mt-1">
                 <label className="flex items-center gap-2 cursor-pointer group">
-                  <input className="h-5 w-5 rounded border-input-border bg-white dark:bg-[#1a3324] text-primary focus:ring-offset-0 focus:ring-2 focus:ring-primary/20 transition-colors cursor-pointer" type="checkbox" />
+                  <input 
+                    className="h-5 w-5 rounded border-input-border bg-white dark:bg-[#1a3324] text-primary focus:ring-offset-0 focus:ring-2 focus:ring-primary/20 transition-colors cursor-pointer" 
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
                   <span className="text-sm font-medium text-text-dark dark:text-gray-300 group-hover:text-primary transition-colors">Recordar mi usuario</span>
                 </label>
                 <a className="text-sm font-bold text-primary hover:text-primary-dark hover:underline transition-colors" href="#">¿Olvidaste tu contraseña?</a>

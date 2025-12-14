@@ -9,6 +9,7 @@ import Routines from './pages/Routines';
 import Sidebar from './components/Sidebar';
 import { Appointment, Client } from './types';
 import { UPCOMING_APPOINTMENTS, CLIENTS } from './constants';
+import { appointmentsApi } from './services/api';
 
 import { getPendingEmail, getConfirmedEmail } from './utils/emailTemplates';
 
@@ -61,28 +62,47 @@ const App: React.FC = () => {
   };
 
   // Function called by Dashboard to confirm a booking
-  const handleConfirmBooking = (id: string) => {
-    let confirmedApt: Appointment | undefined;
-
-    setAppointments(prev => prev.map(apt => {
-      if (apt.id === id) {
-        confirmedApt = apt;
-        return { ...apt, status: 'confirmed', colorClass: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' };
+  const handleConfirmBooking = async (id: string) => {
+    try {
+      // Actualizar en el backend
+      const response = await appointmentsApi.update(id, { status: 'confirmed' });
+      
+      if (response.success) {
+        // Actualizar estado local
+        setAppointments(prev => prev.map(apt => {
+          if (apt.id === id) {
+            return { ...apt, status: 'confirmed', colorClass: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' };
+          }
+          return apt;
+        }));
+        
+        console.log(`%c[EMAIL SYSTEM] Turno confirmado - Email enviado desde backend`, 'color: #13ec5b; font-weight: bold;');
+      } else {
+        console.error('Error al confirmar turno:', response.error);
+        alert('Error al confirmar el turno');
       }
-      return apt;
-    }));
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error de conexión');
+    }
+  };
 
-    if (confirmedApt) {
-      // --- MOCK SENDING CONFIRMATION EMAIL ---
-      const emailHtml = getConfirmedEmail(
-        confirmedApt.clientName,
-        confirmedApt.date,
-        confirmedApt.startTime,
-        confirmedApt.type
-      );
-      console.log(`%c[EMAIL SYSTEM] Sending CONFIRMED email to ${confirmedApt.email || 'user'}`, 'color: #13ec5b; font-weight: bold; background: #f0fdf4; padding: 4px;');
-      console.log(emailHtml);
-      // ---------------------------------------
+  // Function called by Dashboard to reject/cancel booking
+  const handleRejectBooking = async (id: string) => {
+    try {
+      const response = await appointmentsApi.delete(id);
+      
+      if (response.success) {
+        // Eliminar del estado local
+        setAppointments(prev => prev.filter(apt => apt.id !== id));
+        return true;
+      } else {
+        console.error('Error al rechazar turno:', response.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      return false;
     }
   };
 

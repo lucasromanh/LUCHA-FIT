@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Appointment } from '../types';
 import { ASSETS } from '../constants';
+import { appointmentsApi } from '../services/api';
 
 interface HomeProps {
   onNavigate: (page: string) => void;
@@ -118,34 +119,53 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
     return { disabled: false, reason: 'available' };
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.time || !formData.date) return;
 
     setIsLoading(true);
 
-    // Create appointment object
-    const newAppointment: Appointment = {
-      id: Math.random().toString(36).substr(2, 9),
-      clientName: formData.name,
-      email: formData.email,
-      type: formData.service,
-      date: new Date(formData.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
-      rawDate: formData.date,
-      startTime: formData.time,
-      endTime: `${parseInt(formData.time.split(':')[0]) + 1}:00`,
-      status: 'pending_approval',
-      colorClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
-    };
+    try {
+      // Crear appointment en el backend
+      const response = await appointmentsApi.create({
+        client_name: formData.name,
+        email: formData.email,
+        type: formData.service,
+        date: new Date(formData.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
+        start_time: formData.time,
+        end_time: `${parseInt(formData.time.split(':')[0]) + 1}:00`,
+        status: 'pending'
+      });
 
-    // Simulate Network Request
-    setTimeout(() => {
-      // Add to global state
-      if (onRequestBooking) onRequestBooking(newAppointment);
+      if (response.success && response.data) {
+        // Crear objeto para actualizar estado local
+        const newAppointment: Appointment = {
+          id: response.data.id,
+          clientName: formData.name,
+          email: formData.email,
+          type: formData.service,
+          date: new Date(formData.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
+          rawDate: formData.date,
+          startTime: formData.time,
+          endTime: `${parseInt(formData.time.split(':')[0]) + 1}:00`,
+          status: 'pending',
+          colorClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
+        };
 
+        // Actualizar estado local
+        if (onRequestBooking) onRequestBooking(newAppointment);
+
+        setIsLoading(false);
+        setBookingStep('success');
+      } else {
+        setIsLoading(false);
+        alert('Error al crear la solicitud: ' + (response.error || 'Error desconocido'));
+      }
+    } catch (error) {
       setIsLoading(false);
-      setBookingStep('success');
-    }, 1000);
+      console.error('Error:', error);
+      alert('Error de conexión al crear la solicitud');
+    }
   };
 
   const scrollToSection = (id: string) => {
