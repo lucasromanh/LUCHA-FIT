@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -8,7 +8,7 @@ import Reports from './pages/Reports';
 import Routines from './pages/Routines';
 import Sidebar from './components/Sidebar';
 import { Appointment, Client } from './types';
-import { UPCOMING_APPOINTMENTS, CLIENTS } from './constants';
+import { CLIENTS } from './constants';
 import { appointmentsApi } from './services/api';
 
 const App: React.FC = () => {
@@ -16,8 +16,24 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Global Appointment State (Simulating Database)
-  const [appointments, setAppointments] = useState<Appointment[]>(UPCOMING_APPOINTMENTS);
+  // Global Appointment State
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+  // Fetch appointments on load
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const response = await appointmentsApi.getAll();
+        if (response.success && response.data) {
+          setAppointments(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+      }
+    };
+
+    fetchAppointments();
+  }, []);
 
   // State to pass data between Dashboard and Reports/Routines
   const [selectedClientForReports, setSelectedClientForReports] = useState<Client | null>(null);
@@ -47,8 +63,6 @@ const App: React.FC = () => {
   const handleRequestBooking = (newAppointment: Appointment) => {
     // Agregar nueva cita al estado local
     setAppointments(prev => [...prev, newAppointment]);
-
-    // console.log('%c[EMAIL SYSTEM] Email de solicitud pendiente enviado desde backend', 'color: #f59e0b; font-weight: bold;');
   };
 
   // Function called by Dashboard to confirm a booking

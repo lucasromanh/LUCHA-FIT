@@ -62,15 +62,11 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (onConfirmBooking) {
       onConfirmBooking(apt.id);
 
-      // Simulate backend email trigger log
-      // console.log(`%c[EMAIL SYSTEM]`, 'color: #13ec5b; font-weight: bold;');
-      // console.log(`Sending confirmation email to ${apt.email} for appointment on ${apt.date}`);
-
       // Show UI Notification
       setNotification({
         show: true,
         message: `Turno confirmado para ${apt.clientName}`,
-        subtext: `Se ha enviado un email HTML (ver consola) a ${apt.email || 'su correo'}.`
+        subtext: `Se ha enviado confirmación a ${apt.email || 'su correo'}.`
       });
 
       setTimeout(() => {
@@ -484,6 +480,12 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Version Indicator */}
+        <div className="lg:col-span-3 text-center text-xs text-gray-400 mt-8">
+          LuchaFit System v2.0-FIXED (Cache Check)
+        </div>
+
       </div>
 
       <style>{`

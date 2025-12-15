@@ -7,8 +7,8 @@ declare var gapi: any;
 declare var google: any;
 
 // Google Calendar API configuration (from environment variables)
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
+const CLIENT_ID = (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || '';
+const API_KEY = (import.meta as any).env.VITE_GOOGLE_API_KEY || '';
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events.readonly';
 
@@ -56,35 +56,8 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
         return new Date(d.setDate(diff));
     }, [currentDate]);
 
-    // Initial Mock Data (Placed in the current week for visibility)
-    const initialLocalEvents: CalendarEvent[] = useMemo(() => {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = today.getMonth();
-        const day = today.getDate();
-
-        // Create events relative to today so they always show up
-        return [
-            {
-                id: 'local-1',
-                title: 'Ana Gómez - Evaluación',
-                start: new Date(year, month, day, 8, 15),
-                end: new Date(year, month, day, 9, 15),
-                description: 'Evaluación Inicial',
-                colorClass: 'bg-primary/10 border-l-4 border-primary text-text-dark dark:text-white',
-                type: 'local'
-            },
-            {
-                id: 'local-2',
-                title: 'Team Fit - Grupal',
-                start: new Date(year, month, day + 2, 9, 0),
-                end: new Date(year, month, day + 2, 10, 0),
-                description: 'Grupal (3 pax)',
-                colorClass: 'bg-primary/10 border-l-4 border-primary text-text-dark dark:text-white',
-                type: 'local'
-            },
-        ];
-    }, []);
+    // Initial Local Events - Empty to avoid mock data
+    const initialLocalEvents: CalendarEvent[] = useMemo(() => [], []);
 
     useEffect(() => {
         // 1. Convert Props Appointments to CalendarEvents
@@ -399,7 +372,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
 
                 // Add to events
                 setEvents(prev => [...prev, newEvent]);
-                
+
                 console.log('✓ Turno guardado en BD:', response.data.id);
             } else {
                 console.error('Error al guardar turno:', response.error);
@@ -425,7 +398,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
 
         try {
             const response = await appointmentsApi.delete(eventId);
-            
+
             if (response.success) {
                 // Eliminar del estado local
                 setEvents(prev => prev.filter(ev => ev.id !== eventId));
@@ -821,8 +794,8 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                                                 {(viewMode === 'week' ? weekDays : [currentDate]).map((columnDate, colIndex) => {
                                                     const colEvents = events.filter(e => isSameDay(e.start, columnDate));
                                                     return (
-                                                        <div 
-                                                            key={colIndex} 
+                                                        <div
+                                                            key={colIndex}
                                                             className="relative h-full pointer-events-auto hover:bg-black/5 transition-colors cursor-pointer group/column"
                                                             onClick={(e) => {
                                                                 // Si el click no fue en un evento, calcular la hora clickeada
@@ -892,8 +865,8 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                                         const dayEvents = events.filter(e => isSameDay(e.start, d));
 
                                         return (
-                                            <div 
-                                                key={i} 
+                                            <div
+                                                key={i}
                                                 className={`bg-background-light dark:bg-surface-dark p-2 flex flex-col gap-1 min-h-[100px] border-r border-b border-input-border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer ${!isCurrentMonth ? 'opacity-40 bg-gray-50 dark:bg-black/20' : ''}`}
                                                 onClick={(e) => {
                                                     // Si el click no fue en un evento, abrir modal para este día
@@ -984,7 +957,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                                 </button>
                                 {selectedEvent.type !== 'google' && (
                                     <>
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 if (window.confirm('¿Eliminar este turno?')) {
                                                     handleDeleteEvent(selectedEvent.id);
@@ -994,13 +967,13 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                                         >
                                             Eliminar
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 // Extraer datos del evento para prellenar el modal
                                                 const titleParts = selectedEvent.title.split(' - ');
                                                 const clientName = titleParts[0] || '';
                                                 const type = titleParts[1] || selectedEvent.description || '';
-                                                
+
                                                 setAppointmentModalData({
                                                     date: selectedEvent.start,
                                                     time: selectedEvent.start.toTimeString().slice(0, 5)
