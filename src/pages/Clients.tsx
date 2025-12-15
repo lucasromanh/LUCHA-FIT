@@ -30,7 +30,12 @@ const parseDateStr = (dateStr: any) => {
   return new Date(parseInt(parts[2]), months[parts[1]] || 0, parseInt(parts[0])).getTime();
 };
 
-const Clients: React.FC = () => {
+interface ClientsProps {
+  startMode?: 'create' | 'edit' | 'view' | 'list';
+  startData?: any; // Partial Client Data
+}
+
+const Clients: React.FC<ClientsProps> = ({ startMode = 'list', startData }) => {
   // --- BACKEND INTEGRATION ---
   const { clients: clientsData, loading, error, createClient, updateClient, deleteClient } = useClients();
 
@@ -71,7 +76,26 @@ const Clients: React.FC = () => {
     nutricionista: 'No', patologias: '', cirugias: '', medicacion: ''
   };
 
+
   const [formData, setFormData] = useState(initialFormState);
+
+  // Handle External props
+  useEffect(() => {
+    if (startMode === 'create') {
+      setViewMode('create');
+      // Pre-fill if name provided
+      if (startData) {
+        setFormData(prev => ({
+          ...prev,
+          nombre: startData.name ? startData.name.split(' ')[0] : '',
+          apellido: startData.name ? startData.name.split(' ').slice(1).join(' ') : '',
+          email: startData.email || ''
+        }));
+      }
+      setIsModalOpen(true);
+    }
+  }, [startMode, startData]);
+
 
   // --- ACTIONS ---
 

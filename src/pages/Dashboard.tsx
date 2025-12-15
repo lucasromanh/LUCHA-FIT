@@ -11,6 +11,7 @@ interface DashboardProps {
   onRejectBooking?: (id: string) => Promise<boolean>;
   onRescheduleBooking?: (id: string, date: string, time: string) => void;
   onGoToReports?: (client: Client | null, mode: 'new' | 'details') => void;
+  onRegisterPatient?: (name?: string, email?: string) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -19,7 +20,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onConfirmBooking,
   onRejectBooking,
   onRescheduleBooking,
-  onGoToReports
+  onGoToReports,
+  onRegisterPatient
 }) => {
   const [notification, setNotification] = useState<{ show: boolean, message: string, subtext: string } | null>(null);
 
@@ -177,7 +179,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         ...act,
         boldText: client ? client.name : (act.boldText || 'Paciente')
       };
-    });
+    }).filter(act => !['Juan Pérez', 'María González'].includes(act.boldText)); // Filter Mocks
 
     // Sort descending
     return resolvedActivities.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
@@ -593,12 +595,25 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               )}
 
-              <button
-                onClick={() => handleViewProfile(activeClient?.name || activePatientApt!.clientName)}
-                className="w-full bg-text-dark dark:bg-white text-white dark:text-black font-bold py-3 rounded-lg hover:opacity-90 transition-opacity"
-              >
-                Ver Perfil Completo
-              </button>
+              {/* Buttons */}
+              <div className="flex flex-col gap-2 w-full">
+                {activeClient ? (
+                  <button
+                    onClick={() => handleViewProfile(activeClient.name)}
+                    className="w-full bg-text-dark dark:bg-white text-white dark:text-black font-bold py-3 rounded-lg hover:opacity-90 transition-opacity"
+                  >
+                    Ver Perfil Completo
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onRegisterPatient && onRegisterPatient(activePatientApt?.clientName, activePatientApt?.email)}
+                    className="w-full bg-primary text-black font-bold py-3 rounded-lg hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined">person_add</span>
+                    Registrar Paciente
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-6 border border-input-border dark:border-gray-700 text-center text-text-muted">

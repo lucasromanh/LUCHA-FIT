@@ -39,9 +39,12 @@ const App: React.FC = () => {
     fetchAppointments();
   }, []);
 
-  // State to pass data between Dashboard and Reports/Routines
+  // State to pass data between Dashboard and Reports/Routines/Clients
   const [selectedClientForReports, setSelectedClientForReports] = useState<Client | null>(null);
   const [reportViewMode, setReportViewMode] = useState<'details' | 'new' | 'list'>('list');
+
+  // State for Clients Page Navigation (e.g. "Register New Patient" from Dashboard)
+  const [clientNavState, setClientNavState] = useState<{ mode: 'create' | 'list', data?: any }>({ mode: 'list' });
 
   const handleLogin = () => {
     localStorage.setItem('luchafit_auth', 'true');
@@ -63,6 +66,14 @@ const App: React.FC = () => {
       setSelectedClientForReports(null);
       setReportViewMode('list');
     }
+
+    // Reset clients state if navigating normally
+    if (page === 'clients' && currentPage !== 'clients') {
+      // Only reset if we are not already in a special mode... 
+      // For simplicity, always reset nav state when clicking the menu item
+      setClientNavState({ mode: 'list' });
+    }
+
     localStorage.setItem('lucha_current_page', page);
     setCurrentPage(page);
     setIsMobileMenuOpen(false);
@@ -152,6 +163,11 @@ const App: React.FC = () => {
     }
   };
 
+  const handleRegisterPatient = (name?: string, email?: string) => {
+    setClientNavState({ mode: 'create', data: { name, email } });
+    setCurrentPage('clients');
+  };
+
   // If we are on Home page, render Home
   if (currentPage === 'home') {
     return <Home
@@ -232,9 +248,10 @@ const App: React.FC = () => {
               onRejectBooking={handleRejectBooking} // Fix: Pass this prop!
               onRescheduleBooking={handleRescheduleBooking}
               onGoToReports={handleGoToReports}
+              onRegisterPatient={handleRegisterPatient}
             />
           )}
-          {currentPage === 'clients' && <Clients />}
+          {currentPage === 'clients' && <Clients startMode={clientNavState.mode} startData={clientNavState.data} />}
           {currentPage === 'calendar' && <Calendar appointments={appointments} />}
           {currentPage === 'reports' && (
             <Reports
