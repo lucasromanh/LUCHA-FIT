@@ -51,7 +51,7 @@ export interface Appointment {
   rawDate?: string;
   startTime: string;
   endTime: string;
-  status: 'pending' | 'completed' | 'cancelled' | 'pending_approval';
+  status: 'pending' | 'completed' | 'cancelled' | 'pending_approval' | 'confirmed';
   colorClass: string;
 }
 

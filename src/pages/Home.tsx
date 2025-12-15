@@ -149,8 +149,12 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
       });
 
       console.log('%c[DEBUG] Respuesta de API:', 'color: green; font-weight: bold', response);
-      // DEBUG: Alertar al usuario para confirmar qué pasó
-      alert(`DEBUG API Response:\nSuccess: ${response.success}\nMessage: ${response.message}\nError: ${response.error || 'None'}`);
+      if (response.data && response.data.email_status) {
+        console.log('%c[DEBUG] Estado del Email:', 'color: orange; font-weight: bold', response.data.email_status);
+        if (!response.data.email_status.success) {
+          console.warn('Fallo el envío de email:', response.data.email_status.error);
+        }
+      }
 
       if (response.success && response.data) {
         // Crear objeto para actualizar estado local
@@ -175,13 +179,13 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
       } else {
         console.error('%c[DEBUG] Error en respuesta:', 'color: red; font-weight: bold', response);
         setIsLoading(false);
-        alert('Error al crear la solicitud: ' + (response.error || 'Error desconocido'));
+        // alert('Error al crear la solicitud: ' + (response.error || 'Error desconocido'));
       }
     } catch (error) {
       console.error('%c[DEBUG] Error de red/excepción:', 'color: red; font-weight: bold', error);
       setIsLoading(false);
       console.error('Error:', error);
-      alert('Error de conexión al crear la solicitud');
+      // alert('Error de conexión al crear la solicitud');
     }
   };
 

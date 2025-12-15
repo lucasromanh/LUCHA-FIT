@@ -30,9 +30,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [currentPatientIndex, setCurrentPatientIndex] = useState(0);
 
   // Separate appointments by status
-  const pendingApprovals = appointments.filter(a => a.status === 'pending_approval');
+  const pendingApprovals = appointments.filter(a => a.status === 'pending' || a.status === 'pending_approval');
   // Sort upcoming by some logic (here just by existing order)
-  const upcomingAppointments = appointments.filter(a => a.status === 'pending');
+  const upcomingAppointments = appointments.filter(a => a.status === 'confirmed');
 
   // --- LOGIC: NEXT PATIENT CARD ---
   const activePatientApt = upcomingAppointments[currentPatientIndex] || null;
