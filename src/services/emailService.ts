@@ -11,26 +11,21 @@ type AppointmentParams = EmailBaseParams & {
     time: string;          // {{time}}
 };
 
-const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID as string;
-const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string;
+// HARDCODED CREDENTIALS (TO FIX ISSUES)
+const SERVICE_ID = 'service_c5zcwhk';
+const PUBLIC_KEY = 'Dr6K9IAyQtr93bn_g'; // Corrected from screenshot
 
 // Initialize EmailJS immediately
 try {
     if (PUBLIC_KEY) {
         emailjs.init(PUBLIC_KEY);
-        console.log('[EmailJS] Initialized with key:', PUBLIC_KEY);
     }
 } catch (error) {
     console.error('[EmailJS] Init failed:', error);
 }
 
-const TEMPLATE_PENDING = import.meta.env.VITE_EMAILJS_TEMPLATE_PENDING as string;
-const TEMPLATE_CONFIRMED = import.meta.env.VITE_EMAILJS_TEMPLATE_CONFIRMED as string;
-
-console.log('[EmailJS DEBUG] Loading config...');
-console.log('SERVICE_ID:', SERVICE_ID);
-console.log('PUBLIC_KEY:', PUBLIC_KEY);
-console.log('TEMPLATE_PENDING:', TEMPLATE_PENDING);
+const TEMPLATE_PENDING = 'template_epzo6ba'; // Corrected from screenshot
+const TEMPLATE_CONFIRMED = 'template_4e17h29'; // Corrected from screenshot
 
 function assertEnv() {
     const missing: string[] = [];
@@ -40,7 +35,6 @@ function assertEnv() {
     if (!TEMPLATE_CONFIRMED) missing.push('VITE_EMAILJS_TEMPLATE_CONFIRMED');
 
     if (missing.length) {
-        console.error('[EmailJS DEBUG] Missing vars:', missing);
         throw new Error(`Faltan variables en .env: ${missing.join(', ')}`);
     }
 }
@@ -55,6 +49,7 @@ export const luchafitEmail = {
     // 1) PENDIENTE - Se envía cuando el cliente solicita un turno desde Home
     sendAppointmentPending: (p: AppointmentParams) =>
         send(TEMPLATE_PENDING, {
+            email: p.to_email, // FIX: Template expects {{email}} based on screenshot
             to_email: p.to_email,
             client_name: p.client_name,
             service: p.service,
@@ -65,6 +60,7 @@ export const luchafitEmail = {
     // 2) CONFIRMADO - Se envía cuando confirmas el turno desde el Dashboard
     sendAppointmentConfirmed: (p: AppointmentParams) =>
         send(TEMPLATE_CONFIRMED, {
+            email: p.to_email, // FIX: Template expects {{email}} based on screenshot
             to_email: p.to_email,
             client_name: p.client_name,
             service: p.service,
