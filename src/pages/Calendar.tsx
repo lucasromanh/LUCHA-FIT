@@ -7,8 +7,10 @@ declare var gapi: any;
 declare var google: any;
 
 // Google Calendar API configuration (from environment variables)
-const CLIENT_ID = (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || '';
-const API_KEY = (import.meta as any).env.VITE_GOOGLE_API_KEY || '';
+// Google Calendar API configuration (from environment variables)
+// Clean potential quotes or semicolons from env file
+const CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').replace(/['";]/g, '').trim();
+const API_KEY = (import.meta.env.VITE_GOOGLE_API_KEY || '').replace(/['";]/g, '').trim();
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events.readonly';
 
@@ -160,7 +162,18 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
     };
 
     const handleAuthClick = () => {
-        if (!tokenClient) return;
+        // DEBUG: Check values
+        console.log('[Google Calendar DEBUG] Config:', {
+            clientId: CLIENT_ID,
+            apiKey: API_KEY,
+            hasClientId: !!CLIENT_ID,
+            hasApiKey: !!API_KEY
+        });
+
+        if (!tokenClient) {
+            console.error("Token Client not initialized");
+            return;
+        }
 
         setIsLoading(true);
         setErrorMsg(null);
@@ -171,7 +184,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
                 setIsLoading(false);
                 setErrorMsg("Autorización denegada o cancelada.");
                 console.error(resp);
-                throw (resp);
+                return; // Stop here, do not throw
             }
 
             setIsAuthorized(true);
@@ -184,17 +197,6 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
         } else {
             tokenClient.requestAccessToken({ prompt: '' });
         }
-
-        // MOCK SYNC FAILURE FALLBACK FOR DEMO
-        setTimeout(() => {
-            if (!isAuthorized) {
-                // Simulate success if API keys are just placeholders
-                console.log("Mocking Google Calendar Sync for Demo...");
-                setIsAuthorized(true);
-                setIsLoading(false);
-                setEvents(prev => [...prev]); // Trigger re-render
-            }
-        }, 3000);
     };
 
     const fetchGoogleEvents = async () => {
