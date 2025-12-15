@@ -294,3 +294,13 @@ export const MOCK_ROUTINES: Record<string, Routine[]> = {
     }
   ]
 };
+
+export const EXERCISE_CATALOG = [
+  "Sentadilla Libre", "Sentadilla Goblet", "Sentadilla Frontal", "Prensa 45°", "Sillón de Cuádriceps", "Estocadas", "Sentadilla Búlgara", "Peso Muerto Convencional", "Peso Muerto Rumano", "Peso Muerto Sumo", "Hip Thrust", "Puente de Glúteo", "Camilla de Isquios", "Gemelos en Prensa", "Gemelos Parado",
+  "Press Banca Plano", "Press Banca Inclinado", "Press Banca Declinado", "Aperturas con Mancuernas", "Cruce de Poleas", "Flexiones de Brazos", "Fondos en Paralelas",
+  "Dominadas", "Jalón al Pecho", "Remo con Barra", "Remo con Mancuerna", "Remo en Polea Baja", "Face Pull", "Pull Over",
+  "Press Militar", "Press de Hombros con Mancuernas", "Vuelos Laterales", "Vuelos Frontales", "Pájaros (Posterior)", "Remo al Mentón",
+  "Curl de Bíceps con Barra", "Curl Martillo", "Curl Banco Scott", "Tríceps en Polea", "Press Francés", "Extensiones Trasnuca",
+  "Plancha Abdominal", "Crunch Abdominal", "Elevación de Piernas", "Rueda Abdominal", "Russian Twist", "Superman (Lumbares)",
+  "Burpees", "Saltos al Cajón", "Kettlebell Swing", "Mountain Climbers", "Slam Ball"
+].sort();

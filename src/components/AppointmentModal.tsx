@@ -78,7 +78,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
   ) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Limpiar error del campo cuando el usuario lo modifica
     if (errors[name]) {
       setErrors(prev => {
@@ -122,6 +122,26 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email inválido';
+    }
+
+    // --- BUSINESS HOURS VALIDATION ---
+    if (formData.date && formData.startTime && formData.endTime) {
+      const config = JSON.parse(localStorage.getItem('lucha_working_hours') || '{"days":[1,2,3,4,5],"start":"08:00","end":"20:00"}');
+
+      // 1. Check Day
+      // Create date object (append T00:00:00 to avoid UTC shifts if using simple date string)
+      const dateObj = new Date(formData.date + 'T00:00:00');
+      const dayIndex = dateObj.getDay(); // 0 = Sun
+
+      if (!config.days.includes(dayIndex)) {
+        newErrors.date = 'Este día figura como no laborable en la configuración.';
+      }
+
+      // 2. Check Time
+      // Simple string comparison works for HH:MM format (e.g. "09:00" > "08:00")
+      if (formData.startTime < config.start || formData.endTime > config.end) {
+        newErrors.startTime = `El horario de atención es de ${config.start} a ${config.end}.`;
+      }
     }
 
     setErrors(newErrors);
@@ -171,9 +191,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
               name="clientName"
               value={formData.clientName}
               onChange={handleChange}
-              className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${
-                errors.clientName ? 'border-red-500' : 'border-input-border dark:border-gray-700'
-              } rounded-lg text-text-dark dark:text-white placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
+              className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${errors.clientName ? 'border-red-500' : 'border-input-border dark:border-gray-700'
+                } rounded-lg text-text-dark dark:text-white placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
               placeholder="Ej: Juan Pérez"
             />
             {errors.clientName && (
@@ -195,9 +214,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${
-                errors.email ? 'border-red-500' : 'border-input-border dark:border-gray-700'
-              } rounded-lg text-text-dark dark:text-white placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
+              className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${errors.email ? 'border-red-500' : 'border-input-border dark:border-gray-700'
+                } rounded-lg text-text-dark dark:text-white placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
               placeholder="Ej: juan@email.com"
             />
             {errors.email && (
@@ -241,9 +259,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 name="date"
                 value={formData.date}
                 onChange={handleChange}
-                className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${
-                  errors.date ? 'border-red-500' : 'border-input-border dark:border-gray-700'
-                } rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
+                className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${errors.date ? 'border-red-500' : 'border-input-border dark:border-gray-700'
+                  } rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
               />
               {errors.date && (
                 <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
@@ -264,9 +281,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 name="startTime"
                 value={formData.startTime}
                 onChange={handleChange}
-                className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${
-                  errors.startTime ? 'border-red-500' : 'border-input-border dark:border-gray-700'
-                } rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
+                className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${errors.startTime ? 'border-red-500' : 'border-input-border dark:border-gray-700'
+                  } rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
               />
               {errors.startTime && (
                 <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
@@ -287,9 +303,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 name="endTime"
                 value={formData.endTime}
                 onChange={handleChange}
-                className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${
-                  errors.endTime ? 'border-red-500' : 'border-input-border dark:border-gray-700'
-                } rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
+                className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${errors.endTime ? 'border-red-500' : 'border-input-border dark:border-gray-700'
+                  } rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
               />
               {errors.endTime && (
                 <p className="mt-1 text-xs text-red-500 flex items-center gap-1">

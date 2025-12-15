@@ -775,7 +775,48 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
                                         {/* Background Grid Lines - Static and col-span-full to force correct height & width */}
                                         <div className="col-span-full flex flex-col pointer-events-none z-0">
                                             {Array.from({ length: 17 }).map((_, i) => (
-                                                <div key={i} className="h-20 border-b border-input-border dark:border-gray-700 border-dashed w-full"></div>
+                                                <div key={i} className="h-20 border-b border-input-border dark:border-gray-700 border-dashed w-full relative">
+                                                    {/* Work Hours Shading */}
+                                                    {viewMode === 'week' && (
+                                                        <div className="absolute inset-0 grid grid-cols-7 h-full w-full">
+                                                            {weekDays.map((wd, dayIdx) => {
+                                                                const hour = i + 6;
+                                                                // Parse config
+                                                                const config = JSON.parse(localStorage.getItem('lucha_working_hours') || '{"days":[1,2,3,4,5],"start":"08:00","end":"20:00"}');
+                                                                const startHour = parseInt(config.start.split(':')[0]);
+                                                                const endHour = parseInt(config.end.split(':')[0]);
+
+                                                                // Check if this slot is working time
+                                                                const isWorkDay = config.days.includes(wd.getDay());
+                                                                const isWorkHour = hour >= startHour && hour < endHour;
+
+                                                                if (!isWorkDay || !isWorkHour) {
+                                                                    return <div key={dayIdx} className="h-full bg-gray-100/40 dark:bg-black/40 diagonal-stripes"></div>;
+                                                                }
+                                                                return <div key={dayIdx} className="h-full"></div>;
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                    {/* Day View Shading */}
+                                                    {viewMode === 'day' && (
+                                                        <div className="absolute inset-0 grid grid-cols-1 h-full w-full">
+                                                            {(() => {
+                                                                const hour = i + 6;
+                                                                const config = JSON.parse(localStorage.getItem('lucha_working_hours') || '{"days":[1,2,3,4,5],"start":"08:00","end":"20:00"}');
+                                                                const startHour = parseInt(config.start.split(':')[0]);
+                                                                const endHour = parseInt(config.end.split(':')[0]);
+
+                                                                const isWorkDay = config.days.includes(currentDate.getDay());
+                                                                const isWorkHour = hour >= startHour && hour < endHour;
+
+                                                                if (!isWorkDay || !isWorkHour) {
+                                                                    return <div className="h-full bg-gray-100/40 dark:bg-black/40 diagonal-stripes"></div>;
+                                                                }
+                                                                return <div className="h-full"></div>;
+                                                            })()}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             ))}
                                         </div>
                                         <div className={`absolute inset-0 grid pointer-events-none ${viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-1'}`}>

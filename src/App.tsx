@@ -6,6 +6,7 @@ import Clients from './pages/Clients';
 import Calendar from './pages/Calendar';
 import Reports from './pages/Reports';
 import Routines from './pages/Routines';
+import Settings from './pages/Settings';
 import Sidebar from './components/Sidebar';
 import { Appointment, Client } from './types';
 import { CLIENTS } from './constants';
@@ -315,13 +316,7 @@ const App: React.FC = () => {
             />
           )}
           {currentPage === 'routines' && <Routines />}
-          {currentPage === 'settings' && (
-            <div className="flex flex-col items-center justify-center h-full text-text-muted">
-              <span className="material-symbols-outlined text-6xl mb-4 opacity-50">settings</span>
-              <h2 className="text-2xl font-bold mb-2">Configuración</h2>
-              <p>Funcionalidad en desarrollo...</p>
-            </div>
-          )}
+          {currentPage === 'settings' && <Settings />}
         </main>
       </div>
     </div>

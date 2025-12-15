@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { CLIENTS, MOCK_ROUTINES, PROFESSIONAL_PROFILE } from '../constants';
+import { CLIENTS, MOCK_ROUTINES, PROFESSIONAL_PROFILE, EXERCISE_CATALOG } from '../constants';
 import { Client, Routine, RoutineSession, RoutineExercise, ExerciseBlock } from '../types';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useClients } from '../hooks/useClients';
@@ -55,10 +55,15 @@ const Routines: React.FC = () => {
         try {
             const response = await routinesApi.getByPatientId(clientId);
             if (response.success) {
-                // Transform backend data to frontend format if needed
-                // The API returns data that matches our Routine type mostly, 
-                // but let's ensure dates are handled or kept as strings
-                const loadedRoutines = response.data || [];
+                // Transform backend data to frontend format
+                const loadedRoutines = (response.data || []).map((r: any) => ({
+                    ...r,
+                    // Ensure snake_case from DB is mapped to camelCase for frontend
+                    createdAt: r.createdAt || r.created_at || new Date().toISOString().split('T')[0],
+                    patientId: r.patientId || r.patient_id,
+                    updatedAt: r.updatedAt || r.updated_at
+                }));
+
                 setRoutines(prev => ({
                     ...prev,
                     [clientId]: loadedRoutines
@@ -207,12 +212,12 @@ const Routines: React.FC = () => {
                 <tr><td class="header-label">Objetivo</td><td class="header-value">${routine.objective}</td></tr>
                 <tr><td class="header-label">Frecuencia</td><td class="header-value">${routine.frequency}</td></tr>
                 <tr><td class="header-label">Nivel</td><td class="header-value">${routine.level}</td></tr>
-                <tr><td class="header-label">Fecha Creación</td><td class="header-value">${routine.createdAt}</td></tr>
+                <tr><td class="header-label">Fecha Creación</td><td class="header-value">${routine.createdAt || new Date().toISOString().split('T')[0]}</td></tr>
             </table>
             <br/>
-            ${routine.sessions.map(session => `
+            ${(routine.sessions || []).map(session => `
                 <table>
-                    <tr><td colspan="7" class="session-header">--- ${session.label} ---</td></tr>
+                    <tr><td colspan="7" class="session-header">--- ${session.label || 'Día'} ---</td></tr>
                     <tr>
                         <th class="col-header">Bloque</th>
                         <th class="col-header">Ejercicio</th>
@@ -222,9 +227,9 @@ const Routines: React.FC = () => {
                         <th class="col-header">Descanso</th>
                         <th class="col-header">Notas</th>
                     </tr>
-                    ${session.exercises.map(ex => `
+                    ${(session.exercises || []).map(ex => `
                         <tr>
-                            <td class="${ex.block === 'warmup' ? 'block-warmup' : ex.block === 'main' ? 'block-main' : 'block-accessory'}">${ex.block.toUpperCase()}</td>
+                            <td class="${ex.block === 'warmup' ? 'block-warmup' : ex.block === 'main' ? 'block-main' : 'block-accessory'}">${(ex.block || '').toUpperCase()}</td>
                             <td>${ex.name}</td>
                             <td class="center">${ex.sets}</td>
                             <td class="center">${ex.reps}</td>
@@ -290,12 +295,12 @@ const Routines: React.FC = () => {
                 <div class="meta-item"><strong>Objetivo</strong>${routine.objective}</div>
                 <div class="meta-item"><strong>Frecuencia</strong>${routine.frequency}</div>
                 <div class="meta-item"><strong>Nivel</strong>${routine.level}</div>
-                <div class="meta-item"><strong>Fecha Emisión</strong>${routine.createdAt}</div>
+                <div class="meta-item"><strong>Fecha Emisión</strong>${routine.createdAt || new Date().toISOString().split('T')[0]}</div>
             </div>
 
-            ${routine.sessions.map(session => `
+            ${(routine.sessions || []).map(session => `
                 <div class="session">
-                    <div class="session-header">${session.label}</div>
+                    <div class="session-header">${session.label || 'Día'}</div>
                     <table>
                         <thead>
                             <tr>
@@ -309,7 +314,7 @@ const Routines: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            ${session.exercises.map(ex => `
+                            ${(session.exercises || []).map(ex => `
                                 <tr>
                                     <td><span class="badge badge-${ex.block}">${ex.block === 'warmup' ? 'Calent.' : ex.block === 'main' ? 'Principal' : ex.block === 'accessory' ? 'Acc.' : 'Final'}</span></td>
                                     <td><strong>${ex.name}</strong></td>
@@ -485,7 +490,7 @@ const Routines: React.FC = () => {
     };
 
     const renderBlock = (session: RoutineSession, sessionIdx: number, block: ExerciseBlock, title: string) => {
-        const exercises = session.exercises.filter(e => e.block === block);
+        const exercises = (session.exercises || []).filter(e => e.block === block);
 
         return (
             <div className="mb-6">
@@ -496,23 +501,37 @@ const Routines: React.FC = () => {
                     </button>
                 </div>
                 {exercises.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
+                    <div className="overflow-x-auto pb-4"> {/* Added padding bottom for scrollbar */}
+                        <table className="w-full text-sm text-left min-w-[600px]"> {/* Added min-w to force scroll on mobile */}
                             <thead>
                                 <tr className="text-xs text-text-muted">
-                                    <th className="font-medium p-2">Ejercicio</th>
+                                    <th className="font-medium p-2 w-[250px]">Ejercicio</th> {/* Fixed width for name */}
                                     <th className="font-medium p-2 w-16">Series</th>
                                     <th className="font-medium p-2 w-20">Reps</th>
                                     <th className="font-medium p-2 w-24">Carga</th>
                                     <th className="font-medium p-2 w-20">Pausa</th>
-                                    <th className="font-medium p-2">Notas</th>
+                                    <th className="font-medium p-2 min-w-[150px]">Notas</th>
                                     <th className="w-8"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {exercises.map((ex) => (
                                     <tr key={ex.id} className="group hover:bg-gray-50 dark:hover:bg-white/5">
-                                        <td className="p-1"><input type="text" value={ex.name} onChange={(e) => updateExercise(sessionIdx, ex.id, 'name', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none" placeholder="Nombre..." /></td>
+                                        <td className="p-1">
+                                            <input
+                                                list={`exercises-list-${sessionIdx}-${block}`}
+                                                type="text"
+                                                value={ex.name}
+                                                onChange={(e) => updateExercise(sessionIdx, ex.id, 'name', e.target.value)}
+                                                className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none"
+                                                placeholder="Nombre..."
+                                            />
+                                            <datalist id={`exercises-list-${sessionIdx}-${block}`}>
+                                                {EXERCISE_CATALOG.map(opt => (
+                                                    <option key={opt} value={opt} />
+                                                ))}
+                                            </datalist>
+                                        </td>
                                         <td className="p-1"><input type="number" value={ex.sets} onChange={(e) => updateExercise(sessionIdx, ex.id, 'sets', parseInt(e.target.value))} className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none text-center" /></td>
                                         <td className="p-1"><input type="text" value={ex.reps} onChange={(e) => updateExercise(sessionIdx, ex.id, 'reps', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none text-center" /></td>
                                         <td className="p-1"><input type="text" value={ex.load} onChange={(e) => updateExercise(sessionIdx, ex.id, 'load', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none text-center" placeholder="-" /></td>
@@ -754,7 +773,7 @@ const Routines: React.FC = () => {
 
                 {/* Sessions Editor */}
                 <div className="flex flex-col gap-6">
-                    {editorData.sessions.map((session, sIdx) => (
+                    {(editorData.sessions || []).map((session, sIdx) => (
                         <div key={session.id} className="bg-surface-light dark:bg-surface-dark rounded-xl border border-input-border dark:border-gray-700 shadow-sm overflow-hidden">
                             <div className="bg-gray-50 dark:bg-white/5 p-4 border-b border-input-border dark:border-gray-700 flex justify-between items-center">
                                 <input
