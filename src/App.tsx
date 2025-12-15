@@ -312,7 +312,7 @@ const App: React.FC = () => {
             />
           )}
           {currentPage === 'clients' && <Clients startMode={clientNavState.mode} startData={clientNavState.data} />}
-          {currentPage === 'calendar' && <Calendar appointments={appointments} />}
+          {currentPage === 'calendar' && <Calendar appointments={appointments} onDeleteEvent={handleRejectBooking} />}
           {currentPage === 'reports' && (
             <Reports
               externalClient={selectedClientForReports}

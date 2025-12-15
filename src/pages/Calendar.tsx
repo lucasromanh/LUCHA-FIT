@@ -25,9 +25,10 @@ interface CalendarEvent {
 
 interface CalendarProps {
     appointments?: Appointment[];
+    onDeleteEvent?: (id: string) => Promise<boolean>;
 }
 
-const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
+const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent }) => {
     const [gapiInited, setGapiInited] = useState(false);
     const [gisInited, setGisInited] = useState(false);
     const [tokenClient, setTokenClient] = useState<any>(null);
@@ -402,20 +403,17 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
             return;
         }
 
-        try {
-            const response = await appointmentsApi.delete(eventId);
-
-            if (response.success) {
-                // Eliminar del estado local
+        if (onDeleteEvent) {
+            const success = await onDeleteEvent(eventId);
+            if (success) {
+                // Eliminar del estado local (visual update immediate)
                 setEvents(prev => prev.filter(ev => ev.id !== eventId));
                 setSelectedEvent(null);
-                console.log('✓ Turno eliminado');
             } else {
-                alert('Error al eliminar el turno');
+                // Notificacion ya manejada por App o alert aqui si false
             }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Error de conexión al eliminar el turno');
+        } else {
+            console.error("onDeleteEvent prop missing");
         }
     };
 
