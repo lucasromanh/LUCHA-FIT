@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Appointment } from '../types';
+import { Client, Appointment } from '../types';
 import { PROFESSIONAL_PROFILE } from '../constants';
 import { useClients } from '../hooks/useClients';
 import { useMeasurements } from '../hooks/useMeasurements';
@@ -10,7 +10,7 @@ interface DashboardProps {
   onConfirmBooking?: (id: string) => void;
   onRejectBooking?: (id: string) => Promise<boolean>;
   onRescheduleBooking?: (id: string, date: string, time: string) => void;
-  onGoToReports?: (clientName: string, mode: 'new' | 'details') => void;
+  onGoToReports?: (client: Client | null, mode: 'new' | 'details') => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -184,13 +184,21 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const handleStartMeasurement = (clientName: string) => {
     if (onGoToReports) {
-      onGoToReports(clientName, 'new');
+      const client = clients.find(c => c.name.toLowerCase() === clientName.toLowerCase()) || null;
+      if (client) {
+        onGoToReports(client, 'new');
+      } else {
+        // Fallback if client not found in list, pass null to open list
+        console.warn(`Client ${clientName} not found in fetched list. Redirecting to list.`);
+        onGoToReports(null, 'new');
+      }
     }
   };
 
   const handleViewProfile = (clientName: string) => {
     if (onGoToReports) {
-      onGoToReports(clientName, 'details');
+      const client = clients.find(c => c.name.toLowerCase() === clientName.toLowerCase()) || null;
+      onGoToReports(client, 'details');
     }
   };
 

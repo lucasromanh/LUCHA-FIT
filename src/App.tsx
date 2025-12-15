@@ -12,8 +12,12 @@ import { CLIENTS } from './constants';
 import { appointmentsApi } from './services/api';
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentPage, setCurrentPage] = useState('home');
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('luchafit_auth') === 'true';
+  });
+  const [currentPage, setCurrentPage] = useState(() => {
+    return localStorage.getItem('lucha_current_page') || 'home';
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Global Appointment State
@@ -40,11 +44,15 @@ const App: React.FC = () => {
   const [reportViewMode, setReportViewMode] = useState<'details' | 'new' | 'list'>('list');
 
   const handleLogin = () => {
+    localStorage.setItem('luchafit_auth', 'true');
+    localStorage.setItem('lucha_current_page', 'dashboard');
     setIsAuthenticated(true);
     setCurrentPage('dashboard');
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('luchafit_auth');
+    localStorage.removeItem('lucha_current_page');
     setIsAuthenticated(false);
     setCurrentPage('home');
   };
@@ -55,6 +63,7 @@ const App: React.FC = () => {
       setSelectedClientForReports(null);
       setReportViewMode('list');
     }
+    localStorage.setItem('lucha_current_page', page);
     setCurrentPage(page);
     setIsMobileMenuOpen(false);
   };
@@ -124,18 +133,14 @@ const App: React.FC = () => {
   };
 
   // Function called by Dashboard to Start Measurement or View Profile
-  const handleGoToReports = (clientName: string, mode: 'new' | 'details') => {
-    // Find the full Client object based on the name from the appointment
-    const client = CLIENTS.find(c => c.name.toLowerCase() === clientName.toLowerCase());
-
+  const handleGoToReports = (client: Client | null, mode: 'new' | 'details') => {
     if (client) {
       setSelectedClientForReports(client);
       setReportViewMode(mode);
       setCurrentPage('reports');
     } else {
-      // If client doesn't exist, go to Reports List so user can see they need to add one or search manually
-      // This matches the user request to stay in "Mediciones" logic
-      console.warn("Client not found, redirecting to Reports List");
+      // If client doesn't exist, go to Reports List
+      console.warn("Client not provided, redirecting to Reports List");
       setSelectedClientForReports(null);
       setReportViewMode('list');
       setCurrentPage('reports');

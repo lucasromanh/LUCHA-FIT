@@ -1100,7 +1100,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                                 {/* Bar Chart Section */}
                                 <div id="bar-chart" className="flex-1 w-full h-[350px] min-h-[350px]">
                                     <h4 className="text-sm font-bold text-center mb-4 text-gray-500">Perímetros: Total vs Corregido (cm)</h4>
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <BarChart layout="vertical" data={barChartData} margin={{ top: 20, right: 30, left: 40, bottom: 20 }}>
                                             <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                                             <XAxis type="number" />
@@ -1174,7 +1174,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                                 </div>
                                 <div id="skinfolds-chart" className="h-[250px] w-full">
                                     <h4 className="text-center font-bold text-sm mb-4">Perfil de pliegues (mm)</h4>
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <LineChart data={skinfoldsChartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                             <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />

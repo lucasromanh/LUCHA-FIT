@@ -170,12 +170,16 @@ export const useMeasurements = (clientId?: string) => {
       setLoading(true);
       setError(null);
 
-      const data = clientId
+      const response = clientId
         ? await measurementsApi.getByClientId(clientId)
         : await measurementsApi.getAll();
 
+      // The API returns { success: true, data: [...] }
+      // We need to extract the data array from the response object
+      const rawData = (response.success && Array.isArray(response.data)) ? response.data : [];
+
       // Transformar cada medición del backend al formato del frontend
-      const transformed = Array.isArray(data) ? data.map(transformToFrontend) : [];
+      const transformed = rawData.map(transformToFrontend);
       setMeasurements(transformed);
     } catch (err: any) {
       setError(err.message || 'Error al cargar mediciones');

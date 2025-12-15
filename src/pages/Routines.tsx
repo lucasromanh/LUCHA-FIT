@@ -1,9 +1,26 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { CLIENTS, MOCK_ROUTINES, PROFESSIONAL_PROFILE } from '../constants';
 import { Client, Routine, RoutineSession, RoutineExercise, ExerciseBlock } from '../types';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useClients } from '../hooks/useClients';
 import { routinesApi } from '../services/api';
+
+const ROUTINE_OPTIONS = {
+    titles: [
+        "Hipertrofia", "Fuerza", "Resistencia", "Pérdida de Peso",
+        "Mantenimiento", "Adaptación", "Tonificación", "Rehabilitación"
+    ],
+    objectives: [
+        "Aumento de Masa Muscular", "Definición", "Mejora de Rendimiento",
+        "Salud General", "Rehabilitación", "Pérdida de Grasa"
+    ],
+    sports: [
+        "Musculación", "Crossfit", "Running", "Ciclismo",
+        "Natación", "Fútbol", "Tenis", "Artes Marciales", "Otro"
+    ],
+    levels: ["Principiante", "Intermedio", "Avanzado"],
+    frequencies: ["1 día/semana", "2 días/semana", "3 días/semana", "4 días/semana", "5 días/semana", "6 días/semana"]
+};
 
 type RoutineView = 'list' | 'client_details' | 'editor';
 
@@ -24,6 +41,38 @@ const Routines: React.FC = () => {
 
     // Data State
     const [routines, setRoutines] = useState<Record<string, Routine[]>>({});
+    const [loading, setLoading] = useState(false);
+
+    // Load routines when client is selected
+    useEffect(() => {
+        if (selectedClient) {
+            loadClientRoutines(selectedClient.id);
+        }
+    }, [selectedClient]);
+
+    const loadClientRoutines = async (clientId: string) => {
+        setLoading(true);
+        try {
+            const response = await routinesApi.getByPatientId(clientId);
+            if (response.success) {
+                // Transform backend data to frontend format if needed
+                // The API returns data that matches our Routine type mostly, 
+                // but let's ensure dates are handled or kept as strings
+                const loadedRoutines = response.data || [];
+                setRoutines(prev => ({
+                    ...prev,
+                    [clientId]: loadedRoutines
+                }));
+            } else {
+                console.error("Error loading routines:", response.message);
+                setRoutines(prev => ({ ...prev, [clientId]: [] }));
+            }
+        } catch (error) {
+            console.error("Error fetching routines:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Editor State
     const [editorData, setEditorData] = useState<Routine | null>(null);
@@ -54,13 +103,13 @@ const Routines: React.FC = () => {
         const newRoutine: Routine = {
             id: `r-${Date.now()}`,
             patientId: selectedClient.id,
-            title: '',
-            objective: '',
-            sport: '',
+            title: ROUTINE_OPTIONS.titles[0],
+            objective: ROUTINE_OPTIONS.objectives[0],
+            sport: ROUTINE_OPTIONS.sports[0],
             level: 'Intermedio',
             frequency: '3 días/semana',
             status: 'draft',
-            createdAt: new Date().toLocaleDateString('es-ES'),
+            createdAt: new Date().toISOString().split('T')[0], // YYYY-MM-DD for consistency
             sessions: [
                 {
                     id: `s-${Date.now()}-1`,
@@ -85,7 +134,7 @@ const Routines: React.FC = () => {
             id: `r-${Date.now()}`,
             title: `${routine.title} (Copia)`,
             status: 'draft',
-            createdAt: new Date().toLocaleDateString('es-ES')
+            createdAt: new Date().toISOString().split('T')[0]
         };
 
         if (selectedClient) {
@@ -107,12 +156,23 @@ const Routines: React.FC = () => {
         }
     };
 
-    const confirmDeleteAction = () => {
+    const confirmDeleteAction = async () => {
         if (selectedClient && confirmDelete.routineId) {
-            setRoutines(prev => ({
-                ...prev,
-                [selectedClient.id]: prev[selectedClient.id].filter(r => r.id !== confirmDelete.routineId)
-            }));
+            try {
+                const response = await routinesApi.delete(confirmDelete.routineId);
+                if (response.success) {
+                    // Update local state
+                    setRoutines(prev => ({
+                        ...prev,
+                        [selectedClient.id]: prev[selectedClient.id].filter(r => r.id !== confirmDelete.routineId)
+                    }));
+                } else {
+                    alert("Error al eliminar la rutina: " + response.message);
+                }
+            } catch (error) {
+                console.error("Error deleting routine:", error);
+                alert("Ocurrió un error al eliminar la rutina.");
+            }
         }
         setConfirmDelete({ isOpen: false, routineId: null, routineTitle: '' });
     };
@@ -300,20 +360,56 @@ const Routines: React.FC = () => {
     };
 
     // --- VIEW 3: EDITOR LOGIC ---
-    const handleSaveRoutine = () => {
+    const handleSaveRoutine = async () => {
         if (selectedClient && editorData) {
-            setRoutines(prev => {
-                const existing = prev[selectedClient.id] || [];
-                const index = existing.findIndex(r => r.id === editorData.id);
-                if (index >= 0) {
-                    const updated = [...existing];
-                    updated[index] = { ...editorData, status: 'active' };
-                    return { ...prev, [selectedClient.id]: updated };
+            try {
+                let response;
+                // Check if it's a new routine (we use a temporary ID starting with 'r-' and Date.now for new ones in frontend init, 
+                // but backend expects valid IDs or creates them. 
+                // However, in handleCreateRoutine we set 'r-...' 
+                // Let's assume if it starts with 'r-' and contains Date.now() it is NEW, 
+                // OR checking if it exists in the backend list. 
+                // Better approach: The backend creates the ID. 
+                // If we are editing, we should have a real ID from the DB (e.g. RTN-...).
+                // If it is 'r-...' it is likely new.
+
+                const isNew = editorData.id.startsWith('r-');
+
+                const payload = {
+                    ...editorData,
+                    patient_id: selectedClient.id // Ensure snake_case for backend if needed? 
+                    // Actually api.ts usually expects camelCase and client might handle it, 
+                    // BUT checking api.ts logic: it sends JSON.stringify(routineData).
+                    // The backend expects snake_case keys mostly (patient_id, start_date). 
+                    // Let's map it.
+                };
+
+                // Mapping for backend
+                const backendPayload = {
+                    ...payload,
+                    patient_id: selectedClient.id,
+                    start_date: payload.createdAt, // mapping createdAt to start_date for now
+                };
+
+                if (isNew) {
+                    // Remove the temp ID so backend generates one, or leave it if backend ignores it.
+                    // Backend: $routineId = 'RTN-' . uniqid(); -> It ignores sent ID for creation.
+                    response = await routinesApi.create(backendPayload);
                 } else {
-                    return { ...prev, [selectedClient.id]: [editorData, ...existing] };
+                    response = await routinesApi.update(editorData.id, backendPayload);
                 }
-            });
-            setView('client_details');
+
+                if (response.success) {
+                    // Reload routines to get the real ID and fresh data
+                    await loadClientRoutines(selectedClient.id);
+                    setView('client_details');
+                } else {
+                    alert("Error al guardar: " + response.message);
+                }
+            } catch (error) {
+                console.error("Error saving routine:", error);
+                alert("Error de conexión al guardar la rutina.");
+            }
         }
     };
 
@@ -484,7 +580,12 @@ const Routines: React.FC = () => {
 
                 {/* List */}
                 <div className="grid grid-cols-1 gap-4">
-                    {clientRoutines.length > 0 ? (
+                    {loading ? (
+                        <div className="text-center py-10">
+                            <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+                            <p className="text-text-muted mt-2">Cargando rutinas...</p>
+                        </div>
+                    ) : clientRoutines.length > 0 ? (
                         clientRoutines.map(routine => (
                             <div key={routine.id} className="bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl p-6 shadow-sm hover:border-primary dark:hover:border-primary transition-colors flex flex-col md:flex-row justify-between gap-6 relative group">
                                 <div className="flex-1">
@@ -566,27 +667,70 @@ const Routines: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="col-span-1 md:col-span-2">
                             <label className="text-xs font-bold text-gray-500 mb-1 block">Título de la Rutina</label>
-                            <input type="text" value={editorData.title} onChange={(e) => setEditorData({ ...editorData, title: e.target.value })} className="w-full p-2 rounded border border-gray-200 dark:border-gray-600 bg-transparent" placeholder="Ej. Hipertrofia Fase 1" />
+                            <div className="relative">
+                                <select
+                                    value={editorData.title}
+                                    onChange={(e) => setEditorData({ ...editorData, title: e.target.value })}
+                                    className="w-full p-2 rounded border border-gray-200 dark:border-gray-600 bg-transparent appearance-none"
+                                >
+                                    {ROUTINE_OPTIONS.titles.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                                <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-sm">expand_more</span>
+                            </div>
                         </div>
                         <div>
                             <label className="text-xs font-bold text-gray-500 mb-1 block">Objetivo</label>
-                            <input type="text" value={editorData.objective} onChange={(e) => setEditorData({ ...editorData, objective: e.target.value })} className="w-full p-2 rounded border border-gray-200 dark:border-gray-600 bg-transparent" placeholder="Ej. Ganancia muscular" />
+                            <div className="relative">
+                                <select
+                                    value={editorData.objective}
+                                    onChange={(e) => setEditorData({ ...editorData, objective: e.target.value })}
+                                    className="w-full p-2 rounded border border-gray-200 dark:border-gray-600 bg-transparent appearance-none"
+                                >
+                                    {ROUTINE_OPTIONS.objectives.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                                <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-sm">expand_more</span>
+                            </div>
                         </div>
                         <div>
                             <label className="text-xs font-bold text-gray-500 mb-1 block">Deporte</label>
-                            <input type="text" value={editorData.sport} onChange={(e) => setEditorData({ ...editorData, sport: e.target.value })} className="w-full p-2 rounded border border-gray-200 dark:border-gray-600 bg-transparent" placeholder="Ej. Musculación" />
+                            <div className="relative">
+                                <select
+                                    value={editorData.sport}
+                                    onChange={(e) => setEditorData({ ...editorData, sport: e.target.value })}
+                                    className="w-full p-2 rounded border border-gray-200 dark:border-gray-600 bg-transparent appearance-none"
+                                >
+                                    {ROUTINE_OPTIONS.sports.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                                <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-sm">expand_more</span>
+                            </div>
                         </div>
                         <div>
                             <label className="text-xs font-bold text-gray-500 mb-1 block">Nivel</label>
-                            <select value={editorData.level} onChange={(e) => setEditorData({ ...editorData, level: e.target.value })} className="w-full p-2 rounded border border-gray-200 dark:border-gray-600 bg-transparent">
-                                <option>Principiante</option>
-                                <option>Intermedio</option>
-                                <option>Avanzado</option>
-                            </select>
+                            <div className="relative">
+                                <select value={editorData.level} onChange={(e) => setEditorData({ ...editorData, level: e.target.value })} className="w-full p-2 rounded border border-gray-200 dark:border-gray-600 bg-transparent appearance-none">
+                                    {ROUTINE_OPTIONS.levels.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                                <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-sm">expand_more</span>
+                            </div>
                         </div>
                         <div>
                             <label className="text-xs font-bold text-gray-500 mb-1 block">Frecuencia Semanal</label>
-                            <input type="text" value={editorData.frequency} onChange={(e) => setEditorData({ ...editorData, frequency: e.target.value })} className="w-full p-2 rounded border border-gray-200 dark:border-gray-600 bg-transparent" placeholder="Ej. 3 días" />
+                            <div className="relative">
+                                <select value={editorData.frequency} onChange={(e) => setEditorData({ ...editorData, frequency: e.target.value })} className="w-full p-2 rounded border border-gray-200 dark:border-gray-600 bg-transparent appearance-none">
+                                    {ROUTINE_OPTIONS.frequencies.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                                <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-sm">expand_more</span>
+                            </div>
                         </div>
                     </div>
                 </div>
