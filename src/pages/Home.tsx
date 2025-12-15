@@ -105,13 +105,26 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
 
     // Check Taken Slots
     const isTaken = existingAppointments.some(apt => {
+      // Ignorar citas canceladas o rechazadas
+      if (apt.status === 'cancelled' || apt.status === 'rejected') return false;
+
       let dateMatch = false;
+      // Normalizar fecha del turno (puede venir como YYYY-MM-DD o string formateado)
+      // La API devuelve YYYY-MM-DD en rawDate
       if (apt.rawDate === selectedDateStr) dateMatch = true;
-      // Basic fallback if rawDate missing
+
+      // Fallback básico si rawDate falta
       if (!apt.rawDate && apt.date.includes(selectedDateStr.split('-')[2])) {
-        // This is a weak check for demo data, in production use strict ISO dates
+        // Weak check kept for safety
       }
-      return dateMatch && apt.startTime === slot;
+
+      if (!dateMatch) return false;
+
+      // Normalizar tiempos: HH:MM:SS -> HH:MM
+      const aptTime = apt.startTime.substring(0, 5);
+      const slotTime = slot.substring(0, 5);
+
+      return aptTime === slotTime;
     });
 
     if (isTaken) return { disabled: true, reason: 'taken' };
