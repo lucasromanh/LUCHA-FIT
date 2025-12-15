@@ -219,6 +219,7 @@ const App: React.FC = () => {
               onNavigate={navigateTo}
               appointments={appointments}
               onConfirmBooking={handleConfirmBooking}
+              onRejectBooking={handleRejectBooking} // Fix: Pass this prop!
               onRescheduleBooking={handleRescheduleBooking}
               onGoToReports={handleGoToReports}
             />
