@@ -126,16 +126,29 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
     setIsLoading(true);
 
     try {
+      console.log('%c[DEBUG] Enviando solicitud a API...', 'color: blue; font-weight: bold');
+      console.log('Datos:', {
+        client_name: formData.name,
+        email: formData.email,
+        type: formData.service,
+        date: formData.date,
+        start_time: formData.time,
+        end_time: `${parseInt(formData.time.split(':')[0]) + 1}:00`,
+        status: 'pending'
+      });
+      
       // Crear appointment en el backend
       const response = await appointmentsApi.create({
         client_name: formData.name,
         email: formData.email,
         type: formData.service,
-        date: new Date(formData.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
+        date: formData.date, // Formato ISO: 2025-12-17
         start_time: formData.time,
         end_time: `${parseInt(formData.time.split(':')[0]) + 1}:00`,
         status: 'pending'
       });
+
+      console.log('%c[DEBUG] Respuesta de API:', 'color: green; font-weight: bold', response);
 
       if (response.success && response.data) {
         // Crear objeto para actualizar estado local
@@ -158,10 +171,12 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
         setIsLoading(false);
         setBookingStep('success');
       } else {
+        console.error('%c[DEBUG] Error en respuesta:', 'color: red; font-weight: bold', response);
         setIsLoading(false);
         alert('Error al crear la solicitud: ' + (response.error || 'Error desconocido'));
       }
     } catch (error) {
+      console.error('%c[DEBUG] Error de red/excepción:', 'color: red; font-weight: bold', error);
       setIsLoading(false);
       console.error('Error:', error);
       alert('Error de conexión al crear la solicitud');

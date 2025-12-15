@@ -11,8 +11,6 @@ import { Appointment, Client } from './types';
 import { UPCOMING_APPOINTMENTS, CLIENTS } from './constants';
 import { appointmentsApi } from './services/api';
 
-import { getPendingEmail, getConfirmedEmail } from './utils/emailTemplates';
-
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
@@ -47,18 +45,10 @@ const App: React.FC = () => {
 
   // Function called by Home to request a booking (Pre-confirmation)
   const handleRequestBooking = (newAppointment: Appointment) => {
+    // Agregar nueva cita al estado local
     setAppointments(prev => [...prev, newAppointment]);
-
-    // --- MOCK SENDING PENDING EMAIL ---
-    const emailHtml = getPendingEmail(
-      newAppointment.clientName,
-      newAppointment.date, // "13 dic 2025" format from Home
-      newAppointment.startTime,
-      newAppointment.type
-    );
-    console.log(`%c[EMAIL SYSTEM] Sending PENDING email to ${newAppointment.email || 'user'}`, 'color: #f59e0b; font-weight: bold; background: #fffcf0; padding: 4px;');
-    console.log(emailHtml);
-    // ----------------------------------
+    
+    console.log('%c[EMAIL SYSTEM] Email de solicitud pendiente enviado desde backend', 'color: #f59e0b; font-weight: bold;');
   };
 
   // Function called by Dashboard to confirm a booking
