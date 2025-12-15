@@ -162,14 +162,6 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
     };
 
     const handleAuthClick = () => {
-        // DEBUG: Check values
-        console.log('[Google Calendar DEBUG] Config:', {
-            clientId: CLIENT_ID,
-            apiKey: API_KEY,
-            hasClientId: !!CLIENT_ID,
-            hasApiKey: !!API_KEY
-        });
-
         if (!tokenClient) {
             console.error("Token Client not initialized");
             return;
@@ -381,8 +373,6 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
 
                 // Add to events
                 setEvents(prev => [...prev, newEvent]);
-
-                console.log('✓ Turno guardado en BD:', response.data.id);
             } else {
                 console.error('Error al guardar turno:', response.error);
                 alert('Error al guardar el turno');

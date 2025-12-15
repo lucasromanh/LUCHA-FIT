@@ -6,8 +6,6 @@
 const API_BASE_URL = 'https://luchafit.saltacoders.com/api';
 // const API_BASE_URL = 'http://localhost/luchafit/backend/api'; // Use this for local testing if needed
 
-console.log(`%c[API CONFIG] Base URL: ${API_BASE_URL}`, 'background: #222; color: #bada55');
-
 // Tipos de respuesta
 interface ApiResponse<T = any> {
   success: boolean;

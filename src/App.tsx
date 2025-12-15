@@ -97,7 +97,6 @@ const App: React.FC = () => {
         const appointment = appointments.find(apt => apt.id === id);
 
         // Actualizar estado local
-        console.log('[DEBUG] Confirming booking with ID:', id);
         setAppointments(prev => {
           return prev.map(apt => {
             if (apt.id === id) {
@@ -120,13 +119,9 @@ const App: React.FC = () => {
               service: appointment.type,
               date: appointment.date,
               time: `${appointment.startTime} hs`,
-            }).then(() => {
-              console.log('%c[EmailJS] ✅ Email de confirmación enviado', 'color: green; font-weight: bold');
-            }).catch(emailError => {
-              console.error('%c[EmailJS] ⚠️ Error al enviar email de confirmación (background):', 'color: orange; font-weight: bold', emailError);
-            });
+            })
           } catch (e) {
-            console.error(e);
+            // Silently fail if email fails
           }
         }
         return true;
