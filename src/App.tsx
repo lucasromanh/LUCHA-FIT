@@ -82,12 +82,17 @@ const App: React.FC = () => {
 
       if (response.success) {
         // Actualizar estado local
-        setAppointments(prev => prev.map(apt => {
-          if (apt.id === id) {
-            return { ...apt, status: 'confirmed', colorClass: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' };
-          }
-          return apt;
-        }));
+        console.log('[DEBUG] Confirming booking with ID:', id);
+        setAppointments(prev => {
+          console.log('[DEBUG] Previous appointments count:', prev.length);
+          return prev.map(apt => {
+            if (apt.id === id) {
+              console.log('[DEBUG] Found appointment to confirm:', apt.clientName);
+              return { ...apt, status: 'confirmed', colorClass: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' };
+            }
+            return apt;
+          });
+        });
 
         // console.log(`%c[EMAIL SYSTEM] Turno confirmado - Email enviado desde backend`, 'color: #13ec5b; font-weight: bold;');
       } else {

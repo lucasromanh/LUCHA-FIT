@@ -83,17 +83,41 @@ const Dashboard: React.FC<DashboardProps> = ({
 
 
   // --- LOGIC: NEXT PATIENT CARD ---
-  const activePatientApt = upcomingAppointments[currentPatientIndex] || null;
+  // --- LOGIC: NEXT PATIENT VS LAST MEASURED ---
 
-  // Find Client Data matching the appointment (FROM REAL CLIENTS)
-  const activePatientData = useMemo(() => {
-    if (!activePatientApt) return null;
-    const client = clients.find(c => c.name.toLowerCase() === activePatientApt.clientName.toLowerCase()) || null;
-    // console.log('Active Patient:', activePatientApt.clientName, client); // Debug
-    return client;
-  }, [activePatientApt, clients]);
+  // Get Last Measured Client (Fallback)
+  const lastMeasuredClientData = useMemo(() => {
+    if (measurements.length === 0) return null;
+    // Sort measurements desc
+    const sorted = [...measurements].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const lastM = sorted[0];
+    if (!lastM) return null;
+    const client = clients.find(c => c.id === lastM.clientId || c.name === lastM.clientId); // Map ID or Name
+    return client ? { client, appointment: null, measurement: lastM } : null;
+  }, [measurements, clients]);
+
+  // Determine what to show in the "Active" card
+  // Priority: 1. Selected Index of Upcoming, 2. Last Measured Client
+  const activeCardData = useMemo(() => {
+    // If we have upcoming appointments, use the carousel selection
+    if (upcomingAppointments.length > 0) {
+      const apt = upcomingAppointments[currentPatientIndex];
+      if (apt) {
+        const client = clients.find(c => c.name.toLowerCase() === apt.clientName.toLowerCase()) || null;
+        return { client, appointment: apt, measurement: null };
+      }
+    }
+
+    // Fallback: Last Measured
+    return lastMeasuredClientData;
+  }, [upcomingAppointments, currentPatientIndex, lastMeasuredClientData, clients]);
+
+  const activePatientApt = activeCardData?.appointment;
+  const activeClient = activeCardData?.client;
+  const isFallback = !activePatientApt && !!activeClient;
 
   const nextPatient = () => {
+    if (upcomingAppointments.length === 0) return;
     if (currentPatientIndex < upcomingAppointments.length - 1) {
       setCurrentPatientIndex(prev => prev + 1);
     } else {
@@ -102,6 +126,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const prevPatient = () => {
+    if (upcomingAppointments.length === 0) return;
     if (currentPatientIndex > 0) {
       setCurrentPatientIndex(prev => prev - 1);
     } else {
@@ -130,9 +155,24 @@ const Dashboard: React.FC<DashboardProps> = ({
     // If Client ID is high/new, we could assume new? No, unsafe. 
     // Use Measurements as they have dates.
 
-    // Resolve Client Names for measurements
+    // Valid Appointments as Activity
+    appointments.forEach(a => {
+      // If manually created or confirmed in the last few days, add to activity
+      if (a.status === 'confirmed') {
+        activities.push({
+          type: 'client',
+          date: new Date(a.date + 'T' + a.startTime), // Start time usually HH:MM:SS or HH:MM
+          text: 'Turno confirmado para',
+          boldText: a.clientName,
+          subtext: new Date(a.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' }) + ' - ' + a.type
+        });
+      }
+    });
+
+    // Resolve Client Names for activities
     const resolvedActivities = activities.map(act => {
-      const client = clients.find(c => c.id === act.boldText || c.name === act.boldText); // backend returns clientId usually as ID
+      // If boldText is generic or matches a client ID, try to resolve name
+      const client = clients.find(c => c.id === act.boldText || c.name === act.boldText);
       return {
         ...act,
         boldText: client ? client.name : (act.boldText || 'Paciente')
@@ -142,7 +182,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     // Sort descending
     return resolvedActivities.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
 
-  }, [clients, measurements]);
+  }, [clients, measurements, appointments]);
 
 
   const handleConfirm = (apt: Appointment) => {
@@ -484,43 +524,56 @@ const Dashboard: React.FC<DashboardProps> = ({
         {/* Right Column: Recent Activity / Notifications */}
         <div className="flex flex-col gap-6">
           {/* Dynamic Next Patient Card */}
-          {activePatientApt ? (
+          {(activePatientApt || activeClient) ? (
             <div className="bg-gradient-to-br from-primary/10 to-transparent dark:from-primary/5 rounded-xl p-6 border border-primary/20 relative">
               <div className="flex justify-between items-start mb-4">
-                <span className="bg-primary text-black text-xs font-bold px-2 py-1 rounded">EN PROCESO</span>
+                <span className={`text-black text-xs font-bold px-2 py-1 rounded ${isFallback ? 'bg-purple-200 text-purple-800' : 'bg-primary'}`}>
+                  {isFallback ? 'ÚLTIMA MEDICIÓN' : 'EN PROCESO'}
+                </span>
                 <div className="flex gap-1">
-                  <button onClick={prevPatient} className="size-6 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-text-dark dark:text-white">
-                    <span className="material-symbols-outlined text-xs">chevron_left</span>
-                  </button>
-                  <button onClick={nextPatient} className="size-6 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-text-dark dark:text-white">
-                    <span className="material-symbols-outlined text-xs">chevron_right</span>
-                  </button>
+                  {upcomingAppointments.length > 1 && (
+                    <>
+                      <button onClick={prevPatient} className="size-6 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-text-dark dark:text-white">
+                        <span className="material-symbols-outlined text-xs">chevron_left</span>
+                      </button>
+                      <button onClick={nextPatient} className="size-6 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-text-dark dark:text-white">
+                        <span className="material-symbols-outlined text-xs">chevron_right</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
               <div className="flex flex-col items-center text-center mb-6">
                 <div
                   className="w-20 h-20 rounded-full bg-cover bg-center mb-3 ring-4 ring-white dark:ring-surface-dark bg-gray-200"
-                  style={{ backgroundImage: `url('${activePatientData?.image || ''}')` }}
+                  style={{ backgroundImage: `url('${activeClient?.image || ''}')` }}
                 >
-                  {!activePatientData?.image && <span className="flex items-center justify-center h-full text-2xl font-bold text-gray-400">{activePatientApt.clientName.charAt(0)}</span>}
+                  {!activeClient?.image && <span className="flex items-center justify-center h-full text-2xl font-bold text-gray-400">{(activeClient?.name || activePatientApt?.clientName || '?').charAt(0)}</span>}
                 </div>
-                <h3 className="text-lg font-bold text-text-dark dark:text-white">{activePatientApt.clientName}</h3>
-                <p className="text-sm text-text-muted dark:text-gray-400">Objetivo: {activePatientData?.goal || 'No definido'}</p>
-                <p className="text-xs mt-2 bg-white dark:bg-black/20 px-2 py-1 rounded text-primary font-bold">
-                  Turno: {activePatientApt.startTime} hs
-                </p>
+                <h3 className="text-lg font-bold text-text-dark dark:text-white">{activeClient?.name || activePatientApt?.clientName}</h3>
+                <p className="text-sm text-text-muted dark:text-gray-400">Objetivo: {activeClient?.goal || 'No definido'}</p>
+                {activePatientApt && (
+                  <p className="text-xs mt-2 bg-white dark:bg-black/20 px-2 py-1 rounded text-primary font-bold">
+                    Turno: {activePatientApt.startTime} hs
+                  </p>
+                )}
+                {isFallback && activeCardData?.measurement && (
+                  <p className="text-xs mt-2 bg-white dark:bg-black/20 px-2 py-1 rounded text-purple-600 font-bold">
+                    Fecha: {activeCardData.measurement.date}
+                  </p>
+                )}
               </div>
 
-              {activePatientData ? (() => {
+              {activeClient ? (() => {
                 // Helper to get latest measurement data
                 const clientMeasurements = measurements
-                  .filter(m => m.client_id === activePatientData.id || m.clientId === activePatientData.id)
+                  .filter(m => m.client_id === activeClient.id || m.clientId === activeClient.id)
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
                 const latestM = clientMeasurements.length > 0 ? clientMeasurements[0] : null;
-                const displayWeight = latestM?.mass || activePatientData.weight || '-';
-                const displayFat = latestM?.body_fat_percent || activePatientData.bodyFat || '-';
+                const displayWeight = latestM?.mass || activeClient.weight || '-';
+                const displayFat = latestM?.body_fat_percent || activeClient.bodyFat || '-';
 
                 return (
                   <div className="grid grid-cols-2 gap-3 mb-6">
@@ -541,7 +594,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               )}
 
               <button
-                onClick={() => handleViewProfile(activePatientApt.clientName)}
+                onClick={() => handleViewProfile(activeClient?.name || activePatientApt!.clientName)}
                 className="w-full bg-text-dark dark:bg-white text-white dark:text-black font-bold py-3 rounded-lg hover:opacity-90 transition-opacity"
               >
                 Ver Perfil Completo
@@ -549,7 +602,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           ) : (
             <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-6 border border-input-border dark:border-gray-700 text-center text-text-muted">
-              No hay turnos activos para procesar.
+              No hay turnos activos ni mediciones recientes.
             </div>
           )}
 

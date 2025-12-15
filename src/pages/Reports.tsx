@@ -1098,7 +1098,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                             <div className="bg-blue-600 text-white p-3 font-bold px-5">Distribución Adiposo-Muscular</div>
                             <div className="p-6 flex flex-col md:flex-row gap-8 items-center">
                                 {/* Bar Chart Section */}
-                                <div id="bar-chart" className="flex-1 w-full h-[350px] min-h-[350px]">
+                                <div id="bar-chart" className="w-full md:flex-1 h-[350px]" style={{ minHeight: '350px' }}>
                                     <h4 className="text-sm font-bold text-center mb-4 text-gray-500">Perímetros: Total vs Corregido (cm)</h4>
                                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <BarChart layout="vertical" data={barChartData} margin={{ top: 20, right: 30, left: 40, bottom: 20 }}>
