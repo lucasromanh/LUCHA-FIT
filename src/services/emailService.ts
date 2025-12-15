@@ -14,8 +14,23 @@ type AppointmentParams = EmailBaseParams & {
 const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID as string;
 const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string;
 
+// Initialize EmailJS immediately
+try {
+    if (PUBLIC_KEY) {
+        emailjs.init(PUBLIC_KEY);
+        console.log('[EmailJS] Initialized with key:', PUBLIC_KEY);
+    }
+} catch (error) {
+    console.error('[EmailJS] Init failed:', error);
+}
+
 const TEMPLATE_PENDING = import.meta.env.VITE_EMAILJS_TEMPLATE_PENDING as string;
 const TEMPLATE_CONFIRMED = import.meta.env.VITE_EMAILJS_TEMPLATE_CONFIRMED as string;
+
+console.log('[EmailJS DEBUG] Loading config...');
+console.log('SERVICE_ID:', SERVICE_ID);
+console.log('PUBLIC_KEY:', PUBLIC_KEY);
+console.log('TEMPLATE_PENDING:', TEMPLATE_PENDING);
 
 function assertEnv() {
     const missing: string[] = [];
@@ -25,6 +40,7 @@ function assertEnv() {
     if (!TEMPLATE_CONFIRMED) missing.push('VITE_EMAILJS_TEMPLATE_CONFIRMED');
 
     if (missing.length) {
+        console.error('[EmailJS DEBUG] Missing vars:', missing);
         throw new Error(`Faltan variables en .env: ${missing.join(', ')}`);
     }
 }
