@@ -4,6 +4,9 @@
  */
 
 const API_BASE_URL = 'https://luchafit.saltacoders.com/api';
+// const API_BASE_URL = 'http://localhost/luchafit/backend/api'; // Use this for local testing if needed
+
+console.log(`%c[API CONFIG] Base URL: ${API_BASE_URL}`, 'background: #222; color: #bada55');
 
 // Tipos de respuesta
 interface ApiResponse<T = any> {
@@ -24,11 +27,11 @@ const getHeaders = (isFormData = false): HeadersInit => {
   const headers: HeadersInit = {
     'Authorization': `Bearer ${getAuthToken() || ''}`,
   };
-  
+
   if (!isFormData) {
     headers['Content-Type'] = 'application/json';
   }
-  
+
   return headers;
 };
 
@@ -189,7 +192,7 @@ export const measurementsApi = {
   create: async (measurementData: any, images?: File[]): Promise<ApiResponse> => {
     if (images && images.length > 0) {
       const formData = new FormData();
-      
+
       // Agregar datos de medición
       Object.keys(measurementData).forEach(key => {
         if (measurementData[key] !== null && measurementData[key] !== undefined) {
@@ -222,14 +225,14 @@ export const measurementsApi = {
     // Si hay imágenes, usar FormData
     if (images && images.length > 0) {
       const formData = new FormData();
-      
+
       // Agregar todos los campos de measurementData
       Object.keys(measurementData).forEach(key => {
         if (measurementData[key] !== undefined && measurementData[key] !== null) {
           formData.append(key, measurementData[key].toString());
         }
       });
-      
+
       // Agregar imágenes
       images.forEach((image) => {
         formData.append(`images[]`, image);
@@ -365,10 +368,10 @@ export const appointmentsApi = {
   },
 
   delete: async (id: string, cancel = false): Promise<ApiResponse> => {
-    const url = cancel 
+    const url = cancel
       ? `${API_BASE_URL}/appointments.php?id=${id}&cancel=1`
       : `${API_BASE_URL}/appointments.php?id=${id}`;
-    
+
     const response = await fetch(url, {
       method: 'DELETE',
       headers: getHeaders()

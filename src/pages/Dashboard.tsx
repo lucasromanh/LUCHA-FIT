@@ -63,8 +63,8 @@ const Dashboard: React.FC<DashboardProps> = ({
       onConfirmBooking(apt.id);
 
       // Simulate backend email trigger log
-      console.log(`%c[EMAIL SYSTEM]`, 'color: #13ec5b; font-weight: bold;');
-      console.log(`Sending confirmation email to ${apt.email} for appointment on ${apt.date}`);
+      // console.log(`%c[EMAIL SYSTEM]`, 'color: #13ec5b; font-weight: bold;');
+      // console.log(`Sending confirmation email to ${apt.email} for appointment on ${apt.date}`);
 
       // Show UI Notification
       setNotification({
@@ -351,8 +351,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <div key={apt.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col items-center justify-center bg-[#e7f3eb] dark:bg-primary/10 rounded-lg w-14 h-14 text-primary shrink-0">
-                        <span className="text-xs font-bold uppercase">{apt.date.split(' ')[1]}</span>
-                        <span className="text-lg font-black leading-none">{apt.date.split(' ')[0]}</span>
+                        <span className="text-xs font-bold uppercase">{(apt.date && apt.date.includes(' ')) ? apt.date.split(' ')[1] : 'N/A'}</span>
+                        <span className="text-lg font-black leading-none">{(apt.date && apt.date.includes(' ')) ? apt.date.split(' ')[0] : '--'}</span>
                       </div>
                       <div>
                         <div className="flex items-center gap-2">

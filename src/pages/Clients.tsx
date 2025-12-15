@@ -19,8 +19,8 @@ const SPORTS_DATA = {
 const ALL_SPORTS = Object.values(SPORTS_DATA).flat().sort();
 
 // helper for date sorting
-const parseDateStr = (dateStr: string) => {
-  if (!dateStr) return new Date(0).getTime();
+const parseDateStr = (dateStr: any) => {
+  if (!dateStr || typeof dateStr !== 'string') return new Date(0).getTime();
   const months: { [key: string]: number } = {
     'Ene': 0, 'Feb': 1, 'Mar': 2, 'Abr': 3, 'May': 4, 'Jun': 5,
     'Jul': 6, 'Ago': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dic': 11
@@ -43,8 +43,8 @@ const Clients: React.FC = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'create' | 'edit' | 'view'>('create');
-  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; clientId: string | null; clientName: string }>({ 
-    isOpen: false, 
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; clientId: string | null; clientName: string }>({
+    isOpen: false,
     clientId: null,
     clientName: ''
   });
@@ -111,7 +111,8 @@ const Clients: React.FC = () => {
 
   // Simulate loading complex data from flat client object (In real app, fetch full profile)
   const loadClientData = (client: Client) => {
-    const nameParts = (client.name || '').split(' ');
+    const safeName = typeof client.name === 'string' ? client.name : '';
+    const nameParts = safeName.split(' ');
     const [firstName = '', ...restName] = nameParts;
     setFormData({
       // Personal
@@ -152,8 +153,8 @@ const Clients: React.FC = () => {
 
   const handleDelete = (id: string) => {
     const client = clientsData.find(c => c.id === id);
-    setConfirmDelete({ 
-      isOpen: true, 
+    setConfirmDelete({
+      isOpen: true,
       clientId: id,
       clientName: client?.name || 'este perfil'
     });

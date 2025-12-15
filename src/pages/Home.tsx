@@ -136,7 +136,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
         end_time: `${parseInt(formData.time.split(':')[0]) + 1}:00`,
         status: 'pending'
       });
-      
+
       // Crear appointment en el backend
       const response = await appointmentsApi.create({
         client_name: formData.name,
@@ -149,6 +149,8 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
       });
 
       console.log('%c[DEBUG] Respuesta de API:', 'color: green; font-weight: bold', response);
+      // DEBUG: Alertar al usuario para confirmar qué pasó
+      alert(`DEBUG API Response:\nSuccess: ${response.success}\nMessage: ${response.message}\nError: ${response.error || 'None'}`);
 
       if (response.success && response.data) {
         // Crear objeto para actualizar estado local

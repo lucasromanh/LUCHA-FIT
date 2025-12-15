@@ -47,8 +47,8 @@ const App: React.FC = () => {
   const handleRequestBooking = (newAppointment: Appointment) => {
     // Agregar nueva cita al estado local
     setAppointments(prev => [...prev, newAppointment]);
-    
-    console.log('%c[EMAIL SYSTEM] Email de solicitud pendiente enviado desde backend', 'color: #f59e0b; font-weight: bold;');
+
+    // console.log('%c[EMAIL SYSTEM] Email de solicitud pendiente enviado desde backend', 'color: #f59e0b; font-weight: bold;');
   };
 
   // Function called by Dashboard to confirm a booking
@@ -56,7 +56,7 @@ const App: React.FC = () => {
     try {
       // Actualizar en el backend
       const response = await appointmentsApi.update(id, { status: 'confirmed' });
-      
+
       if (response.success) {
         // Actualizar estado local
         setAppointments(prev => prev.map(apt => {
@@ -65,8 +65,8 @@ const App: React.FC = () => {
           }
           return apt;
         }));
-        
-        console.log(`%c[EMAIL SYSTEM] Turno confirmado - Email enviado desde backend`, 'color: #13ec5b; font-weight: bold;');
+
+        // console.log(`%c[EMAIL SYSTEM] Turno confirmado - Email enviado desde backend`, 'color: #13ec5b; font-weight: bold;');
       } else {
         console.error('Error al confirmar turno:', response.error);
         alert('Error al confirmar el turno');
@@ -81,7 +81,7 @@ const App: React.FC = () => {
   const handleRejectBooking = async (id: string) => {
     try {
       const response = await appointmentsApi.delete(id);
-      
+
       if (response.success) {
         // Eliminar del estado local
         setAppointments(prev => prev.filter(apt => apt.id !== id));
