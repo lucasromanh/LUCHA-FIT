@@ -13,44 +13,44 @@ export interface ClientData {
   age?: number;
   gender?: 'Masculino' | 'Femenino' | 'Otro';
   birth_date?: string;
-  
+
   // Datos antropométricos básicos
   weight?: number;
   height?: number;
   weight_diff?: number;
-  
+
   // Objetivo y actividad
   goal?: string;
   sports?: string[];
   activity_level?: 'Sedentario' | 'Ligero' | 'Moderado' | 'Activo' | 'Muy Activo';
   training_frequency?: string;
-  
+
   // Datos clínicos
   medical_conditions?: string;
   medications?: string;
   allergies?: string;
   injuries?: string;
-  
+
   // Profesión y estilo de vida
   occupation?: string;
   sleep_hours?: number;
   stress_level?: 'Bajo' | 'Moderado' | 'Alto';
   hydration?: string;
-  
+
   // Nutrición
   dietary_restrictions?: string;
   food_preferences?: string;
   supplements?: string;
-  
+
   // Estado y seguimiento
   status?: 'Activo' | 'Inactivo' | 'En Pausa';
   last_visit?: string;
   next_appointment?: string;
   notes?: string;
-  
+
   // Imagen
   image_url?: string;
-  
+
   // Timestamps
   created_at?: string;
   updated_at?: string;
@@ -68,12 +68,30 @@ export const useClients = () => {
   const loadClients = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await clientsApi.getAll();
-      
+
       if (response.success && response.data) {
-        setClients(response.data);
+        // Map backend snake_case to frontend camelCase
+        const mappedClients = response.data.map((client: any) => ({
+          ...client,
+          // Map snake_case to camelCase for profile fields
+          birthDate: client.birth_date,
+          handDominance: client.hand_dominance,
+          footDominance: client.foot_dominance,
+          activityType: client.activity_type,
+          activityIntensity: client.activity_intensity,
+          activityFrequency: client.activity_frequency,
+          competitionLevel: client.competition_level,
+          massMax: client.mass_max,
+          massMin: client.mass_min,
+          lastVisit: client.last_visit,
+          bodyFat: client.body_fat,
+          weightDiff: client.weight_diff
+        }));
+
+        setClients(mappedClients);
       } else {
         setError(response.error || 'Error al cargar clientes');
       }
@@ -88,7 +106,7 @@ export const useClients = () => {
   const getClientById = async (id: string): Promise<ClientData | null> => {
     try {
       const response = await clientsApi.getById(id);
-      
+
       if (response.success && response.data) {
         return response.data;
       }
@@ -102,10 +120,10 @@ export const useClients = () => {
   const searchClients = async (query: string) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await clientsApi.search(query);
-      
+
       if (response.success && response.data) {
         setClients(response.data);
       } else {
@@ -125,10 +143,10 @@ export const useClients = () => {
   ): Promise<{ success: boolean; data?: any; error?: string }> => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await clientsApi.create(data, imageFile);
-      
+
       if (response.success) {
         await loadClients();
         return { success: true, data: response.data };
@@ -153,10 +171,10 @@ export const useClients = () => {
   ): Promise<{ success: boolean; data?: any; error?: string }> => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await clientsApi.update(id, data, imageFile);
-      
+
       if (response.success) {
         await loadClients();
         return { success: true, data: response.data };
@@ -177,10 +195,10 @@ export const useClients = () => {
   const deleteClient = async (id: string): Promise<{ success: boolean; error?: string }> => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await clientsApi.delete(id);
-      
+
       if (response.success) {
         await loadClients();
         return { success: true };
