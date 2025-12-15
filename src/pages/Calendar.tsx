@@ -47,6 +47,12 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
     // Appointment Modal States
     const [showAppointmentModal, setShowAppointmentModal] = useState(false);
     const [appointmentModalData, setAppointmentModalData] = useState<{ date?: Date; time?: string }>({});
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    // Reset delete confirmation when event selection changes
+    useEffect(() => {
+        setShowDeleteConfirm(false);
+    }, [selectedEvent]);
 
     // Calculate start of current week (Sunday)
     const currentWeekStart = useMemo(() => {
@@ -951,41 +957,62 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [] }) => {
                                     </div>
                                 )}
                             </div>
-                            <div className="p-4 bg-background-light dark:bg-background-dark border-t border-input-border dark:border-gray-700 flex justify-end gap-3">
-                                <button onClick={() => setSelectedEvent(null)} className="px-4 py-2 text-text-dark dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium">
-                                    Cerrar
-                                </button>
-                                {selectedEvent.type !== 'google' && (
-                                    <>
-                                        <button
-                                            onClick={() => {
-                                                if (window.confirm('¿Eliminar este turno?')) {
-                                                    handleDeleteEvent(selectedEvent.id);
-                                                }
-                                            }}
-                                            className="px-4 py-2 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
-                                        >
-                                            Eliminar
+                            <div className="p-4 bg-background-light dark:bg-background-dark border-t border-input-border dark:border-gray-700">
+                                {showDeleteConfirm ? (
+                                    <div className="flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg border border-red-100 dark:border-red-900">
+                                        <p className="text-sm text-red-700 dark:text-red-300 font-bold ml-2 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-lg">warning</span>
+                                            ¿Eliminar definitivamente?
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setShowDeleteConfirm(false)}
+                                                className="px-3 py-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-white/10 rounded-md transition-colors"
+                                            >
+                                                Cancelar
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteEvent(selectedEvent.id)}
+                                                className="px-3 py-1.5 text-xs font-bold bg-red-500 text-white hover:bg-red-600 rounded-md transition-colors shadow-sm"
+                                            >
+                                                Si, Eliminar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-end gap-3">
+                                        <button onClick={() => setSelectedEvent(null)} className="px-4 py-2 text-text-dark dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium">
+                                            Cerrar
                                         </button>
-                                        <button
-                                            onClick={() => {
-                                                // Extraer datos del evento para prellenar el modal
-                                                const titleParts = selectedEvent.title.split(' - ');
-                                                const clientName = titleParts[0] || '';
-                                                const type = titleParts[1] || selectedEvent.description || '';
+                                        {selectedEvent.type !== 'google' && (
+                                            <>
+                                                <button
+                                                    onClick={() => setShowDeleteConfirm(true)}
+                                                    className="px-4 py-2 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+                                                >
+                                                    Eliminar
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        // Extraer datos del evento para prellenar el modal
+                                                        const titleParts = selectedEvent.title.split(' - ');
+                                                        const clientName = titleParts[0] || '';
+                                                        const type = titleParts[1] || selectedEvent.description || '';
 
-                                                setAppointmentModalData({
-                                                    date: selectedEvent.start,
-                                                    time: selectedEvent.start.toTimeString().slice(0, 5)
-                                                });
-                                                setSelectedEvent(null);
-                                                setShowAppointmentModal(true);
-                                            }}
-                                            className="px-4 py-2 bg-primary text-text-dark font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
-                                        >
-                                            Reprogramar
-                                        </button>
-                                    </>
+                                                        setAppointmentModalData({
+                                                            date: selectedEvent.start,
+                                                            time: selectedEvent.start.toTimeString().slice(0, 5)
+                                                        });
+                                                        setSelectedEvent(null);
+                                                        setShowAppointmentModal(true);
+                                                    }}
+                                                    className="px-4 py-2 bg-primary text-text-dark font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+                                                >
+                                                    Reprogramar
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>

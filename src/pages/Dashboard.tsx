@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Appointment } from '../types';
-import { CLIENTS, PROFESSIONAL_PROFILE } from '../constants';
+import { PROFESSIONAL_PROFILE } from '../constants';
+import { useClients } from '../hooks/useClients';
+import { useMeasurements } from '../hooks/useMeasurements';
 
 interface DashboardProps {
   onNavigate: (page: string) => void;
@@ -21,6 +23,10 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [notification, setNotification] = useState<{ show: boolean, message: string, subtext: string } | null>(null);
 
+  // Data Hooks
+  const { clients } = useClients();
+  const { measurements } = useMeasurements(); // Fetches all measurements when no ID provided
+
   // Reschedule Modal State
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [selectedAptId, setSelectedAptId] = useState<string | null>(null);
@@ -29,17 +35,63 @@ const Dashboard: React.FC<DashboardProps> = ({
   // Carousel State for "In Progress" card
   const [currentPatientIndex, setCurrentPatientIndex] = useState(0);
 
+  // --- STATS CALCULATIONS ---
+  const activeClientsCount = useMemo(() => {
+    return clients.filter(c => c.status === 'Activo').length;
+  }, [clients]);
+
+  const measurementsThisMonth = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    return measurements.filter(m => {
+      // Handle date format differences (YYYY-MM-DD)
+      const mDate = new Date(m.date);
+      return mDate.getMonth() === currentMonth && mDate.getFullYear() === currentYear;
+    }).length;
+  }, [measurements]);
+
   // Separate appointments by status
-  const pendingApprovals = appointments.filter(a => a.status === 'pending' || a.status === 'pending_approval');
-  // Sort upcoming by some logic (here just by existing order)
-  const upcomingAppointments = appointments.filter(a => a.status === 'confirmed');
+  const pendingApprovals = useMemo(() =>
+    appointments.filter(a => a.status === 'pending' || a.status === 'pending_approval'),
+    [appointments]);
+
+  const upcomingAppointments = useMemo(() => {
+    return appointments.filter(a =>
+      a.status === 'confirmed' &&
+      !['Juan Pérez', 'María González'].includes(a.clientName) // Filter out mock/seed data
+    );
+  }, [appointments]);
+
+  const todayAppointmentsCount = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    return upcomingAppointments.filter(a => {
+      // If appointment date is YYYY-MM-DD
+      if (a.date === todayStr) return true;
+      // If appointment date includes time or spaces, simple check
+      if (a.date.startsWith(todayStr)) return true;
+
+      // If format is different, we might be filtering strictly by "upcoming" visual logic
+      // But for "Turnos Hoy" let's try strict today match
+      const aptDateOb = new Date(a.date);
+      if (!isNaN(aptDateOb.getTime())) {
+        return aptDateOb.toISOString().split('T')[0] === todayStr;
+      }
+      return false;
+    }).length;
+  }, [upcomingAppointments]);
+
 
   // --- LOGIC: NEXT PATIENT CARD ---
   const activePatientApt = upcomingAppointments[currentPatientIndex] || null;
-  // Find Client Data matching the appointment
-  const activePatientData = activePatientApt
-    ? CLIENTS.find(c => c.name.toLowerCase() === activePatientApt.clientName.toLowerCase())
-    : null;
+
+  // Find Client Data matching the appointment (FROM REAL CLIENTS)
+  const activePatientData = useMemo(() => {
+    if (!activePatientApt) return null;
+    const client = clients.find(c => c.name.toLowerCase() === activePatientApt.clientName.toLowerCase()) || null;
+    // console.log('Active Patient:', activePatientApt.clientName, client); // Debug
+    return client;
+  }, [activePatientApt, clients]);
 
   const nextPatient = () => {
     if (currentPatientIndex < upcomingAppointments.length - 1) {
@@ -56,6 +108,41 @@ const Dashboard: React.FC<DashboardProps> = ({
       setCurrentPatientIndex(upcomingAppointments.length - 1); // Loop to end
     }
   };
+
+
+  // --- RECENT ACTIVITY FEED (DYNAMIC) ---
+  const recentActivity = useMemo(() => {
+    const activities: { type: 'client' | 'measurement' | 'diet', date: Date, text: string, subtext: string, boldText: string }[] = [];
+
+    // Measurements as Activity
+    measurements.forEach(m => {
+      activities.push({
+        type: 'measurement',
+        date: new Date(m.date),
+        text: 'Nueva medición guardada para',
+        boldText: m.clientId, // This is ID, will map below
+        subtext: new Date(m.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
+      });
+    });
+
+    // In a real app we would have a 'logs' endpoint or 'created_at' on clients. 
+    // Since we don't have created_at on Client type visibly used, we'll focus on Measurements.
+    // If Client ID is high/new, we could assume new? No, unsafe. 
+    // Use Measurements as they have dates.
+
+    // Resolve Client Names for measurements
+    const resolvedActivities = activities.map(act => {
+      const client = clients.find(c => c.id === act.boldText || c.name === act.boldText); // backend returns clientId usually as ID
+      return {
+        ...act,
+        boldText: client ? client.name : (act.boldText || 'Paciente')
+      };
+    });
+
+    // Sort descending
+    return resolvedActivities.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
+
+  }, [clients, measurements]);
 
 
   const handleConfirm = (apt: Appointment) => {
@@ -187,8 +274,9 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
           <p className="text-text-muted dark:text-gray-400 font-medium text-sm mb-2">Pacientes Activos</p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-bold text-text-dark dark:text-white">124</h3>
-            <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full text-xs font-bold">+12% este mes</span>
+            <h3 className="text-3xl font-bold text-text-dark dark:text-white">{activeClientsCount}</h3>
+            {/* Dynamic percentage placeholder - requires history */}
+            <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full text-xs font-bold">Total registrados</span>
           </div>
         </div>
 
@@ -198,8 +286,8 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
           <p className="text-text-muted dark:text-gray-400 font-medium text-sm mb-2">Mediciones del Mes</p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-bold text-text-dark dark:text-white">45</h3>
-            <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full text-xs font-bold">+5% vs mes ant.</span>
+            <h3 className="text-3xl font-bold text-text-dark dark:text-white">{measurementsThisMonth}</h3>
+            <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full text-xs font-bold">Este mes</span>
           </div>
         </div>
 
@@ -209,7 +297,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
           <p className="text-text-muted dark:text-gray-400 font-medium text-sm mb-2">Turnos Hoy</p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-bold text-text-dark dark:text-white">{upcomingAppointments.length}</h3>
+            <h3 className="text-3xl font-bold text-text-dark dark:text-white">{todayAppointmentsCount}</h3>
             <span className="text-gray-400 text-xs font-normal">{pendingApprovals.length} solicitudes web</span>
           </div>
         </div>
@@ -416,18 +504,29 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </p>
               </div>
 
-              {activePatientData ? (
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  <div className="bg-white dark:bg-black/20 p-3 rounded-lg text-center">
-                    <p className="text-xs text-text-muted dark:text-gray-400">Peso Actual</p>
-                    <p className="text-lg font-bold text-text-dark dark:text-white">{activePatientData.weight} kg</p>
+              {activePatientData ? (() => {
+                // Helper to get latest measurement data
+                const clientMeasurements = measurements
+                  .filter(m => m.client_id === activePatientData.id || m.clientId === activePatientData.id)
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                const latestM = clientMeasurements.length > 0 ? clientMeasurements[0] : null;
+                const displayWeight = latestM?.mass || activePatientData.weight || '-';
+                const displayFat = latestM?.body_fat_percent || activePatientData.bodyFat || '-';
+
+                return (
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="bg-white dark:bg-black/20 p-3 rounded-lg text-center">
+                      <p className="text-xs text-text-muted dark:text-gray-400">Peso Actual</p>
+                      <p className="text-lg font-bold text-text-dark dark:text-white">{displayWeight} kg</p>
+                    </div>
+                    <div className="bg-white dark:bg-black/20 p-3 rounded-lg text-center">
+                      <p className="text-xs text-text-muted dark:text-gray-400">Grasa %</p>
+                      <p className="text-lg font-bold text-text-dark dark:text-white">{typeof displayFat === 'number' ? displayFat.toFixed(1) : displayFat}%</p>
+                    </div>
                   </div>
-                  <div className="bg-white dark:bg-black/20 p-3 rounded-lg text-center">
-                    <p className="text-xs text-text-muted dark:text-gray-400">Grasa %</p>
-                    <p className="text-lg font-bold text-text-dark dark:text-white">{activePatientData.bodyFat}%</p>
-                  </div>
-                </div>
-              ) : (
+                );
+              })() : (
                 <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-xs text-center text-yellow-700 dark:text-yellow-400">
                   Este paciente no tiene perfil de datos creado aún.
                 </div>
@@ -450,33 +549,19 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl p-5 shadow-sm">
             <h3 className="font-bold text-text-dark dark:text-white mb-4">Actividad Reciente</h3>
             <div className="flex flex-col gap-4">
-              <div className="flex gap-3 items-start">
-                <div className="mt-1 size-2 rounded-full bg-primary shrink-0"></div>
-                <div>
-                  <p className="text-sm text-text-dark dark:text-gray-200">
-                    <span className="font-bold">Laura S.</span> completó su registro.
-                  </p>
-                  <p className="text-xs text-text-muted dark:text-gray-500 mt-0.5">Hace 2 horas</p>
+              {recentActivity.length > 0 ? recentActivity.map((act, idx) => (
+                <div key={idx} className="flex gap-3 items-start">
+                  <div className={`mt-1 size-2 rounded-full shrink-0 ${act.type === 'measurement' ? 'bg-primary' : 'bg-gray-300'}`}></div>
+                  <div>
+                    <p className="text-sm text-text-dark dark:text-gray-200">
+                      {act.text} <span className="font-bold">{act.boldText}</span>
+                    </p>
+                    <p className="text-xs text-text-muted dark:text-gray-500 mt-0.5">{act.subtext}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-3 items-start">
-                <div className="mt-1 size-2 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0"></div>
-                <div>
-                  <p className="text-sm text-text-dark dark:text-gray-200">
-                    Se envió la dieta a <span className="font-bold">Marcos T.</span>
-                  </p>
-                  <p className="text-xs text-text-muted dark:text-gray-500 mt-0.5">Hace 4 horas</p>
-                </div>
-              </div>
-              <div className="flex gap-3 items-start">
-                <div className="mt-1 size-2 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0"></div>
-                <div>
-                  <p className="text-sm text-text-dark dark:text-gray-200">
-                    Nueva medición guardada para <span className="font-bold">Ana R.</span>
-                  </p>
-                  <p className="text-xs text-text-muted dark:text-gray-500 mt-0.5">Ayer a las 18:30</p>
-                </div>
-              </div>
+              )) : (
+                <p className="text-sm text-gray-500">No hay actividad reciente.</p>
+              )}
             </div>
           </div>
         </div>

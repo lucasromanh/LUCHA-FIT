@@ -368,7 +368,7 @@ const exportToExcel = (data: ExportData) => {
 
     // Create workbook
     const wb = XLSX.utils.book_new();
-    
+
     // Add sheets
     const ws1 = XLSX.utils.aoa_to_sheet(patientData);
     XLSX.utils.book_append_sheet(wb, ws1, 'Datos Paciente');
@@ -405,16 +405,17 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
     // Hook para mediciones - debe ir DESPUÉS de selectedClient
-    const { 
-        measurements: clientMeasurements, 
-        loading: measurementsLoading, 
+    const {
+        measurements: clientMeasurements,
+        loading: measurementsLoading,
         error: measurementsError,
-        createMeasurement 
+        createMeasurement
     } = useMeasurements(selectedClient?.id);
 
     // New Measurement State
     const [measurements, setMeasurements] = useState<MeasurementValues>({});
     const [formErrors, setFormErrors] = useState<string[]>([]);
+    const [successModalOpen, setSuccessModalOpen] = useState(false);
 
     // Detailed Report State
     const [currentRecord, setCurrentRecord] = useState<MeasurementRecord | null>(null);
@@ -448,13 +449,13 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
         setFormErrors([]);
     };
 
-    const loadClientData = (clientId: string) => {
-        // Cargar datos reales desde el backend
-        const history = clientMeasurements || [];
-        if (history.length > 0) {
-            setCurrentRecord(history[0]);
-            if (history.length > 1) {
-                setPrevRecord(history[1]);
+    // Sync currentRecord when clientMeasurements updates (Fixes race condition)
+    useEffect(() => {
+        if (clientMeasurements && clientMeasurements.length > 0) {
+            // Default to most recent
+            setCurrentRecord(clientMeasurements[0]);
+            if (clientMeasurements.length > 1) {
+                setPrevRecord(clientMeasurements[1]);
             } else {
                 setPrevRecord(null);
             }
@@ -462,6 +463,11 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
             setCurrentRecord(null);
             setPrevRecord(null);
         }
+    }, [clientMeasurements]);
+
+    const loadClientData = (clientId: string) => {
+        // DEPRECATED: Logic moved to useEffect above.
+        // Keeping empty function if needed for ref safety, or just triggering strict view change
     };
 
     // --- DERIVED VALUES ---
@@ -566,10 +572,10 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
 
             // Obtener todas las páginas del componente (divs con la clase page-break)
             const pages = container.querySelectorAll('.pdf-page');
-            
+
             for (let i = 0; i < pages.length; i++) {
                 const page = pages[i] as HTMLElement;
-                
+
                 // Capturar cada página individual
                 const canvas = await html2canvas(page, {
                     scale: 2,
@@ -581,12 +587,12 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                 });
 
                 const imgData = canvas.toDataURL('image/png');
-                
+
                 // Agregar página al PDF (excepto la primera vez)
                 if (i > 0) {
                     pdf.addPage();
                 }
-                
+
                 // Agregar la imagen al PDF
                 pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
             }
@@ -604,9 +610,9 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
             setIsGeneratingPDF(false);
         }
     };
-    
+
     const handleSendMail = () => { if (selectedClient) alert(`Enviando informe por correo a: ${selectedClient.email || 'correo@cliente.com'}`); };
-    
+
     const handleExportPDF = () => {
         if (!selectedClient || !currentRecord) {
             alert('No hay datos para exportar');
@@ -694,7 +700,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
 
         exportToExcel(exportData);
     };
-    
+
     const handleUploadClick = () => { fileInputRef.current?.click(); };
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -707,7 +713,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
 
     const filteredClients = useMemo(() => {
         // Usar clientes del backend en lugar de localStorage
-        const sourceData = clientsList.length > 0 ? clientsList : CLIENTS;
+        const sourceData = clientsList;
 
         if (!searchTerm) return sourceData;
         const lowerTerm = searchTerm.toLowerCase();
@@ -807,8 +813,8 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                 data: anthroData
             });
 
-            alert("Medición guardada correctamente en la base de datos.");
-            handleBack();
+            setSuccessModalOpen(true);
+            // handleBack() will be called when closing the success modal
         } catch (error) {
             console.error('Error al guardar medición:', error);
             alert('Error al guardar la medición. Por favor, intenta nuevamente.');
@@ -931,6 +937,32 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                         <button onClick={validateAndSaveNew} className="px-8 py-3 rounded-lg bg-primary text-black font-bold">Guardar Medición</button>
                     </div>
                 </div>
+
+                {/* SUCCESS MODAL */}
+                {successModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-surface-dark rounded-2xl shadow-2xl max-w-sm w-full border border-green-200 dark:border-green-800 overflow-hidden animate-in zoom-in-95 duration-200">
+                            <div className="bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800 px-6 py-4 flex items-center gap-3">
+                                <span className="material-symbols-outlined text-3xl text-green-600 dark:text-green-400">check_circle</span>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Medición Guardada</h3>
+                            </div>
+                            <div className="px-6 py-6">
+                                <p className="text-gray-700 dark:text-gray-300">La medición se ha guardado correctamente en la base de datos.</p>
+                            </div>
+                            <div className="px-6 py-4 bg-gray-50 dark:bg-surface-light flex justify-end">
+                                <button
+                                    onClick={() => {
+                                        setSuccessModalOpen(false);
+                                        handleBack();
+                                    }}
+                                    className="px-5 py-2.5 rounded-lg font-medium text-white bg-green-600 hover:bg-green-700 transition-all shadow-sm"
+                                >
+                                    Aceptar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
@@ -1363,7 +1395,7 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
 
             {/* Loading Overlay para generación de PDF */}
             {isGeneratingPDF && (
-                <LoadingOverlay 
+                <LoadingOverlay
                     message="Generando Informe PDF"
                     submessage={`Preparando informe completo de ${selectedClient?.name || 'paciente'}...`}
                 />

@@ -17,7 +17,7 @@ export interface MeasurementRecord {
   evaluator: string;
   date: string;
   data?: AnthropometricData; // Estructura del frontend (anidada)
-  
+
   // También aceptar campos planos del backend
   mass?: number;
   stature?: number;
@@ -40,14 +40,14 @@ export interface MeasurementRecord {
   humerus?: number;
   bistyloid?: number;
   femur?: number;
-  
+
   // Cálculos del backend (NUNCA se calculan en el frontend)
   bmi?: number;
   body_fat_percent?: number;
   somatotype_endo?: number;
   somatotype_meso?: number;
   somatotype_ecto?: number;
-  
+
   images?: string[];
   created_at?: string;
   updated_at?: string;
@@ -63,20 +63,20 @@ const transformToBackend = (data: Partial<MeasurementRecord>): any => {
   if (!data.data) {
     return data;
   }
-  
+
   // Transformar de anidado a plano
   const anthroData = data.data;
   return {
     client_id: data.clientId || data.client_id,
     evaluator: data.evaluator,
     date: data.date,
-    
+
     // Basic measurements (4 campos)
     mass: anthroData.basic?.mass,
     stature: anthroData.basic?.stature,
     sitting_height: anthroData.basic?.sitting_height,
     arm_span: anthroData.basic?.arm_span,
-    
+
     // Skinfolds (8 campos)
     triceps: anthroData.skinfolds?.triceps,
     subscapular: anthroData.skinfolds?.subscapular,
@@ -86,7 +86,7 @@ const transformToBackend = (data: Partial<MeasurementRecord>): any => {
     abdominal: anthroData.skinfolds?.abdominal,
     thigh: anthroData.skinfolds?.thigh,
     calf: anthroData.skinfolds?.calf,
-    
+
     // Girths (6 campos)
     arm_relaxed: anthroData.girths?.arm_relaxed,
     arm_flexed: anthroData.girths?.arm_flexed,
@@ -94,7 +94,7 @@ const transformToBackend = (data: Partial<MeasurementRecord>): any => {
     hips: anthroData.girths?.hips,
     mid_thigh: anthroData.girths?.mid_thigh,
     calf_girth: anthroData.girths?.calf_girth,
-    
+
     // Breadths (3 campos)
     humerus: anthroData.breadths?.humerus,
     bistyloid: anthroData.breadths?.bistyloid,
@@ -160,7 +160,7 @@ export const useMeasurements = (clientId?: string) => {
   const [measurements, setMeasurements] = useState<MeasurementRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   /**
    * Cargar mediciones desde la base de datos
    * Si se proporciona clientId, carga solo las de ese cliente
@@ -169,11 +169,11 @@ export const useMeasurements = (clientId?: string) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const data = clientId 
+
+      const data = clientId
         ? await measurementsApi.getByClientId(clientId)
         : await measurementsApi.getAll();
-      
+
       // Transformar cada medición del backend al formato del frontend
       const transformed = Array.isArray(data) ? data.map(transformToFrontend) : [];
       setMeasurements(transformed);
@@ -184,14 +184,18 @@ export const useMeasurements = (clientId?: string) => {
       setLoading(false);
     }
   };
-  
+
   /**
    * Cargar al montar el componente
    */
   useEffect(() => {
-    loadMeasurements();
+    // Clear measurements when switching clients to prevent showing stale data
+    setMeasurements([]);
+    if (clientId) {
+      loadMeasurements();
+    }
   }, [clientId]);
-  
+
   /**
    * Crear nueva medición
    * 
@@ -211,16 +215,16 @@ export const useMeasurements = (clientId?: string) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Transformar datos del frontend (anidados) al formato del backend (plano)
       const backendData = transformToBackend(measurementData);
-      
+
       // Enviar al backend - El servidor calculará BMI, % grasa, somatotipo, Z-Scores
       const result = await measurementsApi.create(backendData, images);
-      
+
       // Recargar mediciones para obtener los valores calculados por el backend
       await loadMeasurements();
-      
+
       return result;
     } catch (err: any) {
       setError(err.message || 'Error al crear medición');
@@ -229,7 +233,7 @@ export const useMeasurements = (clientId?: string) => {
       setLoading(false);
     }
   };
-  
+
   /**
    * Actualizar medición existente
    * El backend recalculará automáticamente todos los valores derivados
@@ -242,16 +246,16 @@ export const useMeasurements = (clientId?: string) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Transformar datos del frontend al formato del backend
       const backendData = transformToBackend(measurementData);
-      
+
       // Ahora el API acepta imágenes en el update
       const result = await measurementsApi.update(id, backendData, images);
-      
+
       // Recargar mediciones
       await loadMeasurements();
-      
+
       return result;
     } catch (err: any) {
       setError(err.message || 'Error al actualizar medición');
@@ -260,7 +264,7 @@ export const useMeasurements = (clientId?: string) => {
       setLoading(false);
     }
   };
-  
+
   /**
    * Eliminar medición
    */
@@ -268,9 +272,9 @@ export const useMeasurements = (clientId?: string) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       await measurementsApi.delete(id);
-      
+
       // Recargar mediciones
       await loadMeasurements();
     } catch (err: any) {
@@ -280,20 +284,20 @@ export const useMeasurements = (clientId?: string) => {
       setLoading(false);
     }
   };
-  
+
   /**
    * Obtener la medición más reciente de un cliente
    */
   const getLatestMeasurement = (): MeasurementRecord | null => {
     if (measurements.length === 0) return null;
-    
+
     return measurements.reduce((latest, current) => {
       const latestDate = new Date(latest.date);
       const currentDate = new Date(current.date);
       return currentDate > latestDate ? current : latest;
     });
   };
-  
+
   /**
    * Obtener historial de mediciones ordenado por fecha (más reciente primero)
    */
@@ -302,7 +306,7 @@ export const useMeasurements = (clientId?: string) => {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
   };
-  
+
   return {
     measurements,
     loading,

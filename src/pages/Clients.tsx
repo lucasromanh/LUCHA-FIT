@@ -208,11 +208,35 @@ const Clients: React.FC = () => {
         await updateClient(editingClientId, {
           name: fullName,
           email: formData.email,
+          phone: formData.telefono,
+          address: formData.direccion, // Added
+          birth_date: formData.nacimiento,
           age: new Date().getFullYear() - new Date(formData.nacimiento).getFullYear() || clientToUpdate.age,
           gender: formData.sexo as any,
           weight: parseFloat(formData.masaHabitual) || clientToUpdate.weight,
-          phone: formData.telefono,
-          birth_date: formData.nacimiento
+
+          // Anthro
+          race: formData.raza,
+          hand_dominance: formData.mano,
+          foot_dominance: formData.pie,
+          activity_type: formData.tipoActividad,
+          activity_intensity: formData.intensidadActividad,
+          activity_frequency: formData.frecuenciaActividad,
+          competition_level: formData.nivelCompetencia,
+
+          // Sports
+          sports: formData.deportes,
+          position: formData.posicion,
+
+          // Mass History
+          mass_max: parseFloat(formData.masaMax) || null,
+          mass_min: parseFloat(formData.masaMin) || null,
+
+          // Clinical
+          nutritionist: formData.nutricionista,
+          pathologies: formData.patologias,
+          surgeries: formData.cirugias,
+          medication: formData.medicacion
         } as any);
       } else {
         // Crear nuevo cliente
@@ -220,11 +244,35 @@ const Clients: React.FC = () => {
           name: fullName,
           email: formData.email,
           phone: formData.telefono,
+          address: formData.direccion, // Added
+          birth_date: formData.nacimiento,
           age: new Date().getFullYear() - new Date(formData.nacimiento).getFullYear() || 25,
           gender: formData.sexo as any,
           weight: parseFloat(formData.masaHabitual) || 70,
-          birth_date: formData.nacimiento,
-          status: 'Activo'
+          status: 'Activo',
+
+          // Anthro
+          race: formData.raza,
+          hand_dominance: formData.mano,
+          foot_dominance: formData.pie,
+          activity_type: formData.tipoActividad,
+          activity_intensity: formData.intensidadActividad,
+          activity_frequency: formData.frecuenciaActividad,
+          competition_level: formData.nivelCompetencia,
+
+          // Sports
+          sports: formData.deportes,
+          position: formData.posicion,
+
+          // Mass History
+          mass_max: parseFloat(formData.masaMax) || null,
+          mass_min: parseFloat(formData.masaMin) || null,
+
+          // Clinical
+          nutritionist: formData.nutricionista,
+          pathologies: formData.patologias,
+          surgeries: formData.cirugias,
+          medication: formData.medicacion
         };
 
         // Manejar imagen si existe

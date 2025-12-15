@@ -13,8 +13,8 @@ const Routines: React.FC = () => {
 
     const [view, setView] = useState<RoutineView>('list');
     const [searchTerm, setSearchTerm] = useState('');
-    const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; routineId: string | null; routineTitle: string }>({ 
-        isOpen: false, 
+    const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; routineId: string | null; routineTitle: string }>({
+        isOpen: false,
         routineId: null,
         routineTitle: ''
     });
@@ -22,16 +22,16 @@ const Routines: React.FC = () => {
     // Selected Context
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-    // Data State (In a real app, this would come from an API)
-    const [routines, setRoutines] = useState<Record<string, Routine[]>>(MOCK_ROUTINES);
+    // Data State
+    const [routines, setRoutines] = useState<Record<string, Routine[]>>({});
 
     // Editor State
     const [editorData, setEditorData] = useState<Routine | null>(null);
 
     // --- VIEW 1: CLIENT LIST ---
     const filteredClients = useMemo(() => {
-        // Usar clientes del backend en lugar de localStorage
-        const sourceData = clientsList.length > 0 ? clientsList : CLIENTS;
+        // Usar clientes del backend
+        const sourceData = clientsList;
 
         if (!searchTerm) return sourceData;
         const lowerTerm = searchTerm.toLowerCase();
@@ -99,8 +99,8 @@ const Routines: React.FC = () => {
     const handleDeleteRoutine = (routineId: string) => {
         if (selectedClient) {
             const routine = routines[selectedClient.id]?.find(r => r.id === routineId);
-            setConfirmDelete({ 
-                isOpen: true, 
+            setConfirmDelete({
+                isOpen: true,
                 routineId: routineId,
                 routineTitle: routine?.title || 'esta rutina'
             });
@@ -425,7 +425,7 @@ const Routines: React.FC = () => {
     };
 
     // --- RENDER ---
-    
+
     let content = null;
 
     if (view === 'list') {
@@ -628,7 +628,7 @@ const Routines: React.FC = () => {
     return (
         <>
             {content}
-            
+
             {/* Modal de Confirmación para Eliminar - Global */}
             <ConfirmModal
                 isOpen={confirmDelete.isOpen}
