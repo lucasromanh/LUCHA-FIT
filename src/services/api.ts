@@ -325,7 +325,25 @@ export const appointmentsApi = {
     const response = await fetch(`${API_BASE_URL}/appointments.php`, {
       headers: getHeaders()
     });
-    return response.json();
+    const json = await response.json();
+
+    // Map backend snake_case to frontend camelCase
+    if (json.success && Array.isArray(json.data)) {
+      json.data = json.data.map((item: any) => ({
+        id: item.id,
+        clientName: item.client_name || item.clientName, // Fallback if already camelCase
+        email: item.email,
+        type: item.type,
+        date: item.date,
+        rawDate: item.raw_date || item.date, // Assuming backend might send raw_date or just date
+        startTime: item.start_time || item.startTime,
+        endTime: item.end_time || item.endTime,
+        status: item.status,
+        colorClass: item.color_class || item.colorClass || 'bg-primary/10 border-l-4 border-primary text-text-dark'
+      }));
+    }
+
+    return json;
   },
 
   getById: async (id: string): Promise<ApiResponse> => {
