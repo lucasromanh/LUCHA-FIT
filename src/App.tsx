@@ -10,6 +10,7 @@ import Sidebar from './components/Sidebar';
 import { Appointment, Client } from './types';
 import { CLIENTS } from './constants';
 import { appointmentsApi } from './services/api';
+import { luchafitEmail, generateWhatsAppLink, whatsappMessages } from './services/emailService';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -92,6 +93,9 @@ const App: React.FC = () => {
       const response = await appointmentsApi.update(id, { status: 'confirmed' });
 
       if (response.success) {
+        // Buscar la cita para obtener datos del email
+        const appointment = appointments.find(apt => apt.id === id);
+
         // Actualizar estado local
         console.log('[DEBUG] Confirming booking with ID:', id);
         setAppointments(prev => {
@@ -105,7 +109,22 @@ const App: React.FC = () => {
           });
         });
 
-        // console.log(`%c[EMAIL SYSTEM] Turno confirmado - Email enviado desde backend`, 'color: #13ec5b; font-weight: bold;');
+        // 📧 ENVIAR EMAIL DE CONFIRMACIÓN CON EMAILJS
+        if (appointment && appointment.email) {
+          try {
+            console.log('%c[EmailJS] Enviando email de confirmación...', 'color: blue; font-weight: bold');
+            await luchafitEmail.sendAppointmentConfirmed({
+              to_email: appointment.email,
+              client_name: appointment.clientName,
+              service: appointment.type,
+              date: appointment.date,
+              time: `${appointment.startTime} hs`,
+            });
+            console.log('%c[EmailJS] ✅ Email de confirmación enviado', 'color: green; font-weight: bold');
+          } catch (emailError) {
+            console.error('%c[EmailJS] ⚠️ Error al enviar email de confirmación:', 'color: orange; font-weight: bold', emailError);
+          }
+        }
       } else {
         console.error('Error al confirmar turno:', response.error);
         alert('Error al confirmar el turno');
@@ -119,6 +138,23 @@ const App: React.FC = () => {
   // Function called by Dashboard to reject/cancel booking
   const handleRejectBooking = async (id: string) => {
     try {
+      // Buscar la cita para obtener datos
+      const appointment = appointments.find(apt => apt.id === id);
+
+      // 📱 ABRIR WHATSAPP PRIMERO
+      if (appointment && appointment.phone) {
+        const message = whatsappMessages.rejection(
+          appointment.clientName,
+          appointment.date,
+          appointment.startTime,
+          appointment.type
+        );
+        const whatsappUrl = generateWhatsAppLink(appointment.phone, message);
+
+        console.log('%c[WhatsApp] Abriendo WhatsApp para rechazo...', 'color: green; font-weight: bold');
+        window.open(whatsappUrl, '_blank');
+      }
+
       const response = await appointmentsApi.delete(id);
 
       if (response.success) {
@@ -137,6 +173,23 @@ const App: React.FC = () => {
 
   // Function called by Dashboard to reschedule
   const handleRescheduleBooking = (id: string, newDate: string, newTime: string) => {
+    // Buscar la cita para obtener datos
+    const appointment = appointments.find(apt => apt.id === id);
+
+    // 📱 ABRIR WHATSAPP PRIMERO
+    if (appointment && appointment.phone) {
+      const message = whatsappMessages.reschedule(
+        appointment.clientName,
+        appointment.date,
+        appointment.startTime,
+        appointment.type
+      );
+      const whatsappUrl = generateWhatsAppLink(appointment.phone, message);
+
+      console.log('%c[WhatsApp] Abriendo WhatsApp para reprogramación...', 'color: green; font-weight: bold');
+      window.open(whatsappUrl, '_blank');
+    }
+
     setAppointments(prev => prev.map(apt =>
       apt.id === id ? {
         ...apt,

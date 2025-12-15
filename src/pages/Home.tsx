@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Appointment } from '../types';
 import { ASSETS } from '../constants';
 import { appointmentsApi } from '../services/api';
+import { luchafitEmail } from '../services/emailService';
 
 interface HomeProps {
   onNavigate: (page: string) => void;
@@ -18,6 +19,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     service: 'Evaluación Antropométrica',
     date: '',
     time: ''
@@ -29,6 +31,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
     setFormData({
       name: '',
       email: '',
+      phone: '',
       service: 'Evaluación Antropométrica',
       date: '',
       time: ''
@@ -154,6 +157,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
       const response = await appointmentsApi.create({
         client_name: formData.name,
         email: formData.email,
+        phone: formData.phone,
         type: formData.service,
         date: formData.date, // Formato ISO: 2025-12-17
         start_time: formData.time,
@@ -175,6 +179,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
           id: response.data.id,
           clientName: formData.name,
           email: formData.email,
+          phone: formData.phone,
           type: formData.service,
           date: new Date(formData.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
           rawDate: formData.date,
@@ -186,6 +191,22 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
 
         // Actualizar estado local
         if (onRequestBooking) onRequestBooking(newAppointment);
+
+        // 📧 ENVIAR EMAIL DE PENDING CON EMAILJS
+        try {
+          console.log('%c[EmailJS] Enviando email de turno pendiente...', 'color: blue; font-weight: bold');
+          await luchafitEmail.sendAppointmentPending({
+            to_email: formData.email,
+            client_name: formData.name,
+            service: formData.service,
+            date: new Date(formData.date + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+            time: `${formData.time} hs`,
+          });
+          console.log('%c[EmailJS] ✅ Email enviado correctamente', 'color: green; font-weight: bold');
+        } catch (emailError) {
+          // No bloqueamos el flujo si falla el email
+          console.error('%c[EmailJS] ⚠️ Error al enviar email:', 'color: orange; font-weight: bold', emailError);
+        }
 
         setIsLoading(false);
         setBookingStep('success');
@@ -259,6 +280,18 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
                         onChange={handleInputChange}
                         type="email"
                         placeholder="tucorreo@ejemplo.com"
+                        className="w-full rounded-lg border border-input-border bg-white dark:bg-[#102216] dark:border-gray-700 dark:text-white h-11 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-text-muted mb-1">Teléfono (WhatsApp)</label>
+                      <input
+                        required
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        type="tel"
+                        placeholder="+54 9 11 1234-5678"
                         className="w-full rounded-lg border border-input-border bg-white dark:bg-[#102216] dark:border-gray-700 dark:text-white h-11 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                       />
                     </div>

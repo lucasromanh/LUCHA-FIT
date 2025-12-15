@@ -46,6 +46,7 @@ export interface Appointment {
   id: string;
   clientName: string;
   email?: string;
+  phone?: string;
   type: string;
   date: string;
   rawDate?: string;
