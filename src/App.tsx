@@ -243,7 +243,7 @@ const App: React.FC = () => {
 
   // Protected App Layout
   return (
-    <div className="flex h-screen w-full bg-background-light dark:bg-background-dark text-text-dark dark:text-gray-100 overflow-hidden font-display">
+    <div className="flex h-[100dvh] w-full bg-background-light dark:bg-background-dark text-text-dark dark:text-gray-100 overflow-hidden font-display">
       {/* Sidebar - Desktop */}
       <Sidebar
         currentPage={currentPage}
@@ -254,7 +254,7 @@ const App: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between p-4 bg-surface-light dark:bg-surface-dark border-b border-input-border dark:border-gray-800 z-50">
+        <div className="lg:hidden flex items-center justify-between p-4 pt-[calc(1rem+env(safe-area-inset-top))] bg-surface-light dark:bg-surface-dark border-b border-input-border dark:border-gray-800 z-50 sticky top-0 shrink-0">
           <div className="flex items-center gap-2">
             <div className="size-8 rounded-full bg-primary flex items-center justify-center text-text-dark font-bold text-sm">LF</div>
             <span className="font-bold text-lg">LUCHA-FIT</span>

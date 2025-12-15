@@ -339,7 +339,7 @@ const Routines: React.FC = () => {
         printWindow.document.close();
     };
 
-    const downloadFile = (routine: Routine, type: 'pdf' | 'xls') => {
+    const downloadFile = async (routine: Routine, type: 'pdf' | 'xls') => {
         if (!selectedClient) return;
 
         const fileName = `Rutina_${selectedClient.name.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}`;
@@ -349,10 +349,27 @@ const Routines: React.FC = () => {
         } else {
             const xlsContent = generateXLSContent(routine, selectedClient.name);
             const blob = new Blob([xlsContent], { type: 'application/vnd.ms-excel' });
+            const fileName = `Rutina_${selectedClient.name.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.xls`;
+            const file = new File([blob], fileName, { type: 'application/vnd.ms-excel' });
+
+            // 📱 MOBILE SHARE SUPPORT
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: `Rutina: ${selectedClient.name}`,
+                        text: 'Adjunto archivo de rutina.'
+                    });
+                    return;
+                } catch (e) {
+                    // Fallback to download
+                }
+            }
+
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
             link.setAttribute("href", url);
-            link.setAttribute("download", `${fileName}.xls`);
+            link.setAttribute("download", fileName);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

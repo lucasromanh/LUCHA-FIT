@@ -125,7 +125,25 @@ export const useClients = () => {
       const response = await clientsApi.search(query);
 
       if (response.success && response.data) {
-        setClients(response.data);
+        // Map backend snake_case to frontend camelCase
+        const mappedClients = response.data.map((client: any) => ({
+          ...client,
+          // Map snake_case to camelCase for profile fields
+          birthDate: client.birth_date,
+          handDominance: client.hand_dominance,
+          footDominance: client.foot_dominance,
+          activityType: client.activity_type,
+          activityIntensity: client.activity_intensity,
+          activityFrequency: client.activity_frequency,
+          competitionLevel: client.competition_level,
+          massMax: client.mass_max,
+          massMin: client.mass_min,
+          lastVisit: client.last_visit,
+          bodyFat: client.body_fat,
+          weightDiff: client.weight_diff
+        }));
+
+        setClients(mappedClients);
       } else {
         setError(response.error || 'Error al buscar clientes');
       }
