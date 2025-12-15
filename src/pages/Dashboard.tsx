@@ -7,7 +7,7 @@ import { useMeasurements } from '../hooks/useMeasurements';
 interface DashboardProps {
   onNavigate: (page: string) => void;
   appointments?: Appointment[];
-  onConfirmBooking?: (id: string) => void;
+  onConfirmBooking?: (id: string) => Promise<boolean>;
   onRejectBooking?: (id: string) => Promise<boolean>;
   onRescheduleBooking?: (id: string, date: string, time: string) => void;
   onGoToReports?: (client: Client | null, mode: 'new' | 'details') => void;
@@ -187,20 +187,30 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, [clients, measurements, appointments]);
 
 
-  const handleConfirm = (apt: Appointment) => {
+  const handleConfirm = async (apt: Appointment) => {
     if (onConfirmBooking) {
-      onConfirmBooking(apt.id);
+      // Show loading state or disable button could be added here
+      const success = await onConfirmBooking(apt.id);
 
-      // Show UI Notification
-      setNotification({
-        show: true,
-        message: `Turno confirmado para ${apt.clientName}`,
-        subtext: `Se ha enviado confirmación a ${apt.email || 'su correo'}.`
-      });
+      if (success) {
+        // Show UI Notification
+        setNotification({
+          show: true,
+          message: `Turno confirmado para ${apt.clientName}`,
+          subtext: `Se ha enviado confirmación a ${apt.email || 'su correo'}.`
+        });
 
-      setTimeout(() => {
-        setNotification(null);
-      }, 4000);
+        setTimeout(() => {
+          setNotification(null);
+        }, 4000);
+      } else {
+        setNotification({
+          show: true,
+          message: 'Error al confirmar',
+          subtext: 'Intente nuevamente.'
+        });
+        setTimeout(() => setNotification(null), 3000);
+      }
     }
   };
 

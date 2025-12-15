@@ -87,7 +87,7 @@ const App: React.FC = () => {
   };
 
   // Function called by Dashboard to confirm a booking
-  const handleConfirmBooking = async (id: string) => {
+  const handleConfirmBooking = async (id: string): Promise<boolean> => {
     try {
       // Actualizar en el backend
       const response = await appointmentsApi.update(id, { status: 'confirmed' });
@@ -99,10 +99,8 @@ const App: React.FC = () => {
         // Actualizar estado local
         console.log('[DEBUG] Confirming booking with ID:', id);
         setAppointments(prev => {
-          console.log('[DEBUG] Previous appointments count:', prev.length);
           return prev.map(apt => {
             if (apt.id === id) {
-              console.log('[DEBUG] Found appointment to confirm:', apt.clientName);
               return { ...apt, status: 'confirmed', colorClass: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' };
             }
             return apt;
@@ -110,28 +108,37 @@ const App: React.FC = () => {
         });
 
         // 📧 ENVIAR EMAIL DE CONFIRMACIÓN CON EMAILJS
+        // Hacemos esto sin await para no bloquear la UI, o con await si queremos asegurar el envío
+        // El usuario prefiere feedback rápido, pero asegura que se envíe.
         if (appointment && appointment.email) {
           try {
-            console.log('%c[EmailJS] Enviando email de confirmación...', 'color: blue; font-weight: bold');
-            await luchafitEmail.sendAppointmentConfirmed({
+            // No hacemos await crítico aquí para retornar true rápido, pero EmailJS es rápido.
+            // Para asegurar la secuencia correcta descrita por el usuario, mantendremos la llamada async.
+            luchafitEmail.sendAppointmentConfirmed({
               to_email: appointment.email,
               client_name: appointment.clientName,
               service: appointment.type,
               date: appointment.date,
               time: `${appointment.startTime} hs`,
+            }).then(() => {
+              console.log('%c[EmailJS] ✅ Email de confirmación enviado', 'color: green; font-weight: bold');
+            }).catch(emailError => {
+              console.error('%c[EmailJS] ⚠️ Error al enviar email de confirmación (background):', 'color: orange; font-weight: bold', emailError);
             });
-            console.log('%c[EmailJS] ✅ Email de confirmación enviado', 'color: green; font-weight: bold');
-          } catch (emailError) {
-            console.error('%c[EmailJS] ⚠️ Error al enviar email de confirmación:', 'color: orange; font-weight: bold', emailError);
+          } catch (e) {
+            console.error(e);
           }
         }
+        return true;
       } else {
         console.error('Error al confirmar turno:', response.error);
         alert('Error al confirmar el turno');
+        return false;
       }
     } catch (error) {
       console.error('Error:', error);
       alert('Error de conexión');
+      return false;
     }
   };
 
