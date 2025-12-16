@@ -686,23 +686,56 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
           </div>
         </div>
       </div>
-      <footer className="bg-surface-light dark:bg-surface-dark border-t border-input-border dark:border-gray-800 py-12 px-4 md:px-10 lg:px-40 mt-auto">
-        <div className="layout-content-container max-w-[960px] mx-auto w-full flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-full bg-primary flex items-center justify-center text-text-dark font-bold text-xl">LF</div>
-            <span className="text-text-dark dark:text-white text-lg font-bold">LUCHA-FIT</span>
+      <footer className="bg-white border-t border-gray-200 pt-16 pb-8 px-6 md:px-10 lg:px-20 mt-auto">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+          {/* Col 1: Brand */}
+          <div className="flex flex-col items-start gap-4">
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="Lucha Fit Logo" className="h-20 w-auto" />
+              <span className="text-black text-2xl font-black tracking-tight">LUCHA-FIT</span>
+            </div>
+            <p className="text-gray-600 text-sm max-w-xs">
+              Plataforma integral para el seguimiento y control antropométrico profesional.
+            </p>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-8 text-center md:text-left">
-            <div className="flex flex-col gap-2 text-sm text-text-muted dark:text-gray-400 font-medium">
-              <p className="font-bold text-text-dark dark:text-white mb-1">Contacto</p>
-              <p>Maipu 952, Salta, Argentina</p>
-              <p>Luchafit.nut@gmail.com</p>
-              <p>+54 9 387 440-4472</p>
+          {/* Col 2: Servicios */}
+          <div className="flex flex-col gap-4">
+            <h4 className="text-black font-bold text-lg">Servicios</h4>
+            <ul className="flex flex-col gap-2 text-gray-700 font-medium">
+              <li><a href="#" className="hover:text-primary transition-colors">Gestión de Pacientes</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Rutinas de Entrenamiento</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Mediciones Antropométricas</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Reportes de Progreso</a></li>
+            </ul>
+          </div>
+
+          {/* Col 3: Contacto */}
+          <div className="flex flex-col gap-4">
+            <h4 className="text-black font-bold text-lg">Contacto</h4>
+            <div className="flex flex-col gap-3 text-gray-700 font-medium">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">location_on</span>
+                <span>Maipu 952, Salta, Argentina</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">mail</span>
+                <span>Luchafit.nut@gmail.com</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">call</span>
+                <span>+54 9 387 561-5317</span>
+              </div>
             </div>
           </div>
+        </div>
 
-          <p className="text-text-muted dark:text-gray-500 text-xs mt-4 md:mt-0">© 2026 LUCHA-FIT. Todos los derechos reservados.</p>
+        <div className="max-w-7xl mx-auto border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-gray-500 text-sm font-medium">© 2026 LUCHA-FIT. Todos los derechos reservados.</p>
+          <div className="flex gap-4">
+            <a href="#" className="text-gray-400 hover:text-black transition-colors"><span className="material-symbols-outlined">captive_portal</span></a>
+            <a href="#" className="text-gray-400 hover:text-black transition-colors"><span className="material-symbols-outlined">policy</span></a>
+          </div>
         </div>
       </footer>
       <a aria-label="Contactar por WhatsApp" className="fixed bottom-6 right-6 z-[100] flex items-center justify-center w-14 h-14 bg-[#25D366] text-white rounded-full shadow-xl hover:scale-110 hover:shadow-2xl transition-all duration-300 group" href="https://wa.me/5493875615317" target="_blank">

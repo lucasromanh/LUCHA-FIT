@@ -24,34 +24,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, onLogout }) 
     isak_level: String(PROFESSIONAL_PROFILE.isak_level)
   });
 
-  // Fetch profile on mount
-  React.useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        // Try to fetch updated profile
-        const storedToken = localStorage.getItem('luchafit_jwt');
-        const res = await fetch('http://localhost:8000/api/profile.php', {
-          headers: { 'Authorization': `Bearer ${storedToken || ''}` }
-        });
-        // Also try relative path if localhost fails or differs in prod
-        const res2 = !res.ok ? await fetch('/api/profile.php', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` } }) : res;
-
-        if (res2.ok) {
-          const data = await res2.json();
-          if (data.success && data.data) {
-            setProfile({
-              name: data.data.name || PROFESSIONAL_PROFILE.name,
-              photo: data.data.photo || PROFESSIONAL_PROFILE.image,
-              isak_level: data.data.isak_level || String(PROFESSIONAL_PROFILE.isak_level)
-            });
-          }
-        }
-      } catch (e) {
-        // Silently fail and use defaults
-      }
-    };
-    fetchProfile();
-  }, []); // Run once on mount
+  // Reverted: No longer fetching from API to prevent blocking/errors as requested.
+  // Profile data is static constant to ensure stability.
 
   return (
     <aside className="hidden lg:flex w-64 flex-col h-full bg-surface-light dark:bg-surface-dark border-r border-input-border dark:border-gray-800 flex-shrink-0">

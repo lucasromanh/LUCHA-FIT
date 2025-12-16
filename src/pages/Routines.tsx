@@ -4,6 +4,8 @@ import { Client, Routine, RoutineSession, RoutineExercise, ExerciseBlock } from 
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useClients } from '../hooks/useClients';
 import { routinesApi } from '../services/api';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const ROUTINE_OPTIONS = {
     titles: [
@@ -128,9 +130,55 @@ const Routines: React.FC = () => {
         setView('editor');
     };
 
-    const handleEditRoutine = (routine: Routine) => {
-        setEditorData(JSON.parse(JSON.stringify(routine))); // Deep copy
-        setView('editor');
+
+
+    const handleEditRoutine = async (routine: Routine) => {
+        // Fetch full details from backend
+        setLoading(true);
+        try {
+            const response = await routinesApi.getById(routine.id);
+            if (response.success && response.data) {
+                const r = response.data;
+                // Map backend snake_case to frontend camelCase
+                const fullRoutine: Routine = {
+                    ...r,
+                    id: r.id,
+                    patientId: r.patient_id || r.patientId,
+                    title: r.title,
+                    objective: r.objective,
+                    sport: r.sport,
+                    level: r.level,
+                    frequency: r.frequency,
+                    status: r.status,
+                    createdAt: r.created_at || r.createdAt || new Date().toISOString().split('T')[0],
+                    sessions: (r.sessions || []).map((s: any) => ({
+                        id: s.id,
+                        routineId: s.routine_id || s.routineId,
+                        label: s.label,
+                        exercises: (s.exercises || []).map((e: any) => ({
+                            id: e.id,
+                            block: e.block,
+                            name: e.name,
+                            sets: e.sets,
+                            reps: e.reps,
+                            load: e.load,
+                            rest: e.rest,
+                            notes: e.notes
+                        }))
+                    }))
+                };
+
+                setEditorData(fullRoutine);
+                setView('editor');
+            } else {
+                alert("Error al cargar la rutina: " + (response.message || "Datos incompletos"));
+            }
+        } catch (error) {
+            console.error("Error loading routine details:", error);
+            alert("Error de conexión al cargar la rutina.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleDuplicateRoutine = (routine: Routine) => {
@@ -246,140 +294,167 @@ const Routines: React.FC = () => {
       `;
     };
 
-    const openPrintWindow = (routine: Routine, clientName: string) => {
-        const printWindow = window.open('', '_blank', 'width=900,height=800');
-        if (!printWindow) {
-            alert("Por favor habilita las ventanas emergentes para generar el PDF.");
-            return;
-        }
-
-        const htmlContent = `
-        <html>
-        <head>
-            <title>Rutina - ${clientName}</title>
-            <style>
-                body { font-family: 'Arial', sans-serif; line-height: 1.4; color: #333; padding: 30px; }
-                .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 3px solid #13ec5b; padding-bottom: 15px; }
-                .logo { background-color: #13ec5b; color: black; font-weight: bold; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-                .meta-container { background-color: #f5f5f5; border-radius: 8px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; font-size: 14px; }
-                .meta-item strong { display: block; color: #555; font-size: 11px; text-transform: uppercase; margin-bottom: 2px; }
-                .session { margin-bottom: 30px; page-break-inside: avoid; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
-                .session-header { background-color: #0d1b12; color: white; padding: 10px 15px; font-weight: bold; font-size: 16px; }
-                table { width: 100%; border-collapse: collapse; font-size: 12px; }
-                th { text-align: left; padding: 10px; background-color: #e7f3eb; color: #0d1b12; font-weight: bold; border-bottom: 2px solid #ddd; }
-                td { padding: 10px; border-bottom: 1px solid #eee; }
-                tr:last-child td { border-bottom: none; }
-                .badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
-                .badge-warmup { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
-                .badge-main { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
-                .badge-accessory { background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }
-                .badge-cooldown { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
-                @media print {
-                    body { -webkit-print-color-adjust: exact; }
-                    .session { page-break-inside: avoid; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="brand">
-                <div class="logo">LF</div>
-                <div>
-                    <h1 style="margin:0; font-size: 24px;">${PROFESSIONAL_PROFILE.name}</h1>
-                    <p style="margin:0; font-size: 12px; color: #666;">ISAK Nivel ${PROFESSIONAL_PROFILE.isak_level} | Entrenador Personal</p>
-                </div>
-            </div>
-            
-            <div class="meta-container">
-                <div class="meta-item"><strong>Paciente</strong>${clientName}</div>
-                <div class="meta-item"><strong>Plan de Entrenamiento</strong>${routine.title}</div>
-                <div class="meta-item"><strong>Objetivo</strong>${routine.objective}</div>
-                <div class="meta-item"><strong>Frecuencia</strong>${routine.frequency}</div>
-                <div class="meta-item"><strong>Nivel</strong>${routine.level}</div>
-                <div class="meta-item"><strong>Fecha Emisión</strong>${routine.createdAt || new Date().toISOString().split('T')[0]}</div>
-            </div>
-
-            ${(routine.sessions || []).map(session => `
-                <div class="session">
-                    <div class="session-header">${session.label || 'Día'}</div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th width="10%">Tipo</th>
-                                <th width="25%">Ejercicio</th>
-                                <th width="8%">Series</th>
-                                <th width="12%">Reps</th>
-                                <th width="15%">Carga</th>
-                                <th width="10%">Pausa</th>
-                                <th width="20%">Notas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${(session.exercises || []).map(ex => `
-                                <tr>
-                                    <td><span class="badge badge-${ex.block}">${ex.block === 'warmup' ? 'Calent.' : ex.block === 'main' ? 'Principal' : ex.block === 'accessory' ? 'Acc.' : 'Final'}</span></td>
-                                    <td><strong>${ex.name}</strong></td>
-                                    <td>${ex.sets}</td>
-                                    <td>${ex.reps}</td>
-                                    <td>${ex.load}</td>
-                                    <td>${ex.rest}</td>
-                                    <td style="color:#666;">${ex.notes || '-'}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `).join('')}
-
-            <div style="margin-top: 40px; text-align: center; font-size: 10px; color: #999;">
-                Documento generado automáticamente por la plataforma LUCHA-FIT
-            </div>
-            <script>
-                window.onload = function() { window.print(); }
-            </script>
-        </body>
-        </html>
-      `;
-
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-    };
-
+    // PDF GENERATION LOGIC
     const downloadFile = async (routine: Routine, type: 'pdf' | 'xls') => {
         if (!selectedClient) return;
 
         const fileName = `Rutina_${selectedClient.name.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}`;
 
         if (type === 'pdf') {
-            openPrintWindow(routine, selectedClient.name);
-        } else {
-            const xlsContent = generateXLSContent(routine, selectedClient.name);
-            const blob = new Blob([xlsContent], { type: 'application/vnd.ms-excel' });
-            const fileName = `Rutina_${selectedClient.name.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.xls`;
-            const file = new File([blob], fileName, { type: 'application/vnd.ms-excel' });
+            // Create a temporary container for the PDF content
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.left = '-9999px';
+            tempContainer.style.top = '0';
+            tempContainer.style.width = '800px'; // A4 width approx
+            tempContainer.style.backgroundColor = '#ffffff';
+            document.body.appendChild(tempContainer);
 
-            // 📱 MOBILE SHARE SUPPORT
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            // Fetch full data if sessions are missing (just in case, though likely passing summary routine for download)
+            // Ideally we should ensure we have full data. 
+            // If routine.sessions is empty/undefined, we might need to fetch. 
+            // But let's assume for "Client Details" view we might need to fetch if the list was summary only.
+            // The list view mapping logic in 'loadClientRoutines' DOES NOT map sessions.
+            // So 'routine' passed here from list view DOES NOT have sessions.
+            // WE MUST FETCH DETAILS FIRST if sessions are missing!
+
+            let routineToPrint = routine;
+            if (!routine.sessions || routine.sessions.length === 0) {
                 try {
-                    await navigator.share({
-                        files: [file],
-                        title: `Rutina: ${selectedClient.name}`,
-                        text: 'Adjunto archivo de rutina.'
-                    });
-                    return;
+                    const res = await routinesApi.getById(routine.id);
+                    if (res.success && res.data) {
+                        // Map (Quick map for print)
+                        const r = res.data;
+                        routineToPrint = {
+                            ...r,
+                            id: r.id,
+                            patientId: r.patient_id || r.patientId,
+                            title: r.title,
+                            objective: r.objective,
+                            sport: r.sport,
+                            level: r.level,
+                            frequency: r.frequency,
+                            status: r.status,
+                            createdAt: r.created_at || r.createdAt,
+                            sessions: (r.sessions || []).map((s: any) => ({
+                                ...s, exercises: s.exercises || []
+                            }))
+                        };
+                    }
                 } catch (e) {
-                    // Fallback to download
+                    console.error("Failed to fetch full routine for PDF", e);
+                    alert("No se pudieron cargar los detalles para el PDF.");
+                    document.body.removeChild(tempContainer);
+                    return;
                 }
             }
 
+            // Generate HTML Content (Reusing the print template logic but optimized for capture)
+            tempContainer.innerHTML = `
+                <div style="font-family: Arial, sans-serif; padding: 40px; color: #333;">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; border-bottom: 3px solid #13ec5b; padding-bottom: 15px;">
+                        <div style="background-color: #13ec5b; color: black; font-weight: bold; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 20px;">LF</div>
+                        <div>
+                            <h1 style="margin:0; font-size: 24px;">${PROFESSIONAL_PROFILE.name}</h1>
+                            <p style="margin:0; font-size: 14px; color: #666;">ISAK Nivel ${PROFESSIONAL_PROFILE.isak_level} | Entrenador Personal</p>
+                        </div>
+                    </div>
+                     <div style="background-color: #f5f5f5; border-radius: 8px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; font-size: 14px;">
+                        <div><strong>PACIENTE:</strong> ${selectedClient.name}</div>
+                        <div><strong>RUTINA:</strong> ${routineToPrint.title}</div>
+                        <div><strong>OBJETIVO:</strong> ${routineToPrint.objective}</div>
+                        <div><strong>FRECUENCIA:</strong> ${routineToPrint.frequency}</div>
+                        <div><strong>NIVEL:</strong> ${routineToPrint.level}</div>
+                        <div><strong>FECHA:</strong> ${routineToPrint.createdAt || new Date().toISOString().split('T')[0]}</div>
+                    </div>
+                    ${(routineToPrint.sessions || []).map(session => `
+                        <div style="margin-bottom: 30px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; page-break-inside: avoid;">
+                            <div style="background-color: #0d1b12; color: white; padding: 10px 15px; font-weight: bold; font-size: 16px;">${session.label || 'Día'}</div>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                <thead>
+                                    <tr style="background-color: #e7f3eb; color: #0d1b12;">
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Bloque</th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Ejercicio</th>
+                                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid #ddd;">Series</th>
+                                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid #ddd;">Reps</th>
+                                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid #ddd;">Carga</th>
+                                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid #ddd;">Pausa</th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Notas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${(session.exercises || []).map(ex => `
+                                        <tr style="border-bottom: 1px solid #eee;">
+                                            <td style="padding: 10px;">
+                                                <span style="
+                                                    padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;
+                                                    ${ex.block === 'warmup' ? 'background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5;' :
+                    ex.block === 'main' ? 'background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7;' :
+                        ex.block === 'accessory' ? 'background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe;' :
+                            'background: #f8fafc; color: #475569; border: 1px solid #e2e8f0;'}
+                                                ">
+                                                    ${ex.block === 'warmup' ? 'Calent.' : ex.block === 'main' ? 'Principal' : ex.block === 'accessory' ? 'Acc.' : 'Final'}
+                                                </span>
+                                            </td>
+                                            <td style="padding: 10px;"><strong>${ex.name}</strong></td>
+                                            <td style="padding: 10px; text-align: center;">${ex.sets}</td>
+                                            <td style="padding: 10px; text-align: center;">${ex.reps}</td>
+                                            <td style="padding: 10px; text-align: center;">${ex.load}</td>
+                                            <td style="padding: 10px; text-align: center;">${ex.rest}</td>
+                                            <td style="padding: 10px; color: #666;">${ex.notes || '-'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `).join('')}
+                    <div style="margin-top: 20px; text-align: center; font-size: 10px; color: #999;">Generado por LUCHA-FIT</div>
+                </div>
+            `;
+
+            try {
+                const canvas = await html2canvas(tempContainer, {
+                    scale: 2, // Improve quality
+                    useCORS: true,
+                    logging: false
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                pdf.save(`${fileName}.pdf`);
+
+            } catch (err) {
+                console.error("PDF Generation Error:", err);
+                alert("Error al generar el PDF.");
+            } finally {
+                document.body.removeChild(tempContainer);
+            }
+
+        } else {
+            // ... Existing XLS logic (kept concise for replacement)
+            const xlsContent = generateXLSContent(routine, selectedClient.name);
+            const blob = new Blob([xlsContent], { type: 'application/vnd.ms-excel' });
+            const file = new File([blob], fileName + '.xls', { type: 'application/vnd.ms-excel' });
+
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({ files: [file], title: `Rutina: ${selectedClient.name}`, text: 'Adjunto rutina.' });
+                    return;
+                } catch (e) { }
+            }
             const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", fileName);
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName + '.xls';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
     };
+
 
     // --- VIEW 3: EDITOR LOGIC ---
     const handleSaveRoutine = async () => {

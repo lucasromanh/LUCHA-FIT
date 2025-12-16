@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PROFESSIONAL_PROFILE } from '../constants';
 
 const Settings: React.FC = () => {
@@ -49,6 +49,7 @@ const Settings: React.FC = () => {
         bio: ''
     });
     const [isProfileSaving, setIsProfileSaving] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Initial Fetch (Backend Profile)
     useEffect(() => {
@@ -68,28 +69,20 @@ const Settings: React.FC = () => {
                 const storedToken = localStorage.getItem('luchafit_jwt'); // Trying common name or verify with user.
 
                 // Actually, let's just try to fetch.
-                const response = await fetch('http://localhost:8000/api/profile.php', { // Use relative path in prod or env var
-                    headers: {
-                        'Authorization': `Bearer ${storedToken || ''}`
-                    }
-                });
-                // Note: Dev environment specific URL? The user has `backend/test.php` opened.
-                // `vite.config.ts` might proxy `/api`. Let's assume `/api` relative path.
-                const res = await fetch('/api/profile.php', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}` // Trying 'token'
-                    }
-                });
+                // Fetch from consolidated auth.php which returns full profile
+                const res = await fetch('http://localhost:8000/api/auth.php', { headers: { 'Authorization': `Bearer ${storedToken || ''}` } });
+                const res2 = !res.ok ? await fetch('/api/auth.php', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` } }) : res;
 
                 if (res.ok) {
-                    const data = await res.json();
-                    if (data.success && data.data) {
+                    const responseData = await res.json();
+                    if (responseData.success && responseData.data?.user) {
+                        const userData = responseData.data.user;
                         setProfileData({
-                            name: data.data.name || '',
-                            phone: data.data.phone || '',
-                            photo: data.data.photo || '',
-                            isak_level: data.data.isak_level || '1',
-                            bio: data.data.bio || ''
+                            name: userData.name || '',
+                            phone: userData.phone || '',
+                            photo: userData.photo || PROFESSIONAL_PROFILE.image,
+                            isak_level: userData.isak_level || '1',
+                            bio: userData.bio || ''
                         });
                     }
                 }
@@ -103,17 +96,33 @@ const Settings: React.FC = () => {
     const handleSaveProfile = async () => {
         setIsProfileSaving(true);
         try {
-            const res = await fetch('/api/profile.php', {
+            const formData = new FormData();
+            formData.append('name', profileData.name);
+            formData.append('phone', profileData.phone);
+            formData.append('isak_level', profileData.isak_level);
+            formData.append('bio', profileData.bio);
+            formData.append('photo', profileData.photo);
+
+            if (fileInputRef.current?.files?.[0]) {
+                formData.append('photo_file', fileInputRef.current.files[0]);
+            }
+
+            const res = await fetch('/api/auth.php', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
                 },
-                body: JSON.stringify(profileData)
+                body: formData
             });
             const data = await res.json();
 
             if (data.success) {
+                // auth.php returns fields inside `data` (because sendSuccess wraps it)
+                // The update response: sendSuccess(["message"=>..., "photo"=>...])
+                // So: data.data.photo
+                if (data.data?.photo) {
+                    setProfileData(prev => ({ ...prev, photo: data.data.photo }));
+                }
                 setShowSaveSuccess(true);
                 setTimeout(() => setShowSaveSuccess(false), 3000);
             } else {
@@ -292,26 +301,24 @@ const Settings: React.FC = () => {
                 </div>
             </section>
 
-            {/* 3. PERFIL PROFESIONAL (Read Only for now or simple display) */}
-            <section className="bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl p-6 shadow-sm opacity-75">
+            {/* 3. PERFIL PROFESIONAL (Solo Lectura) */}
+            <section className="bg-surface-light dark:bg-surface-dark border border-input-border dark:border-gray-700 rounded-xl p-6 shadow-sm opacity-60">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                         <span className="material-symbols-outlined">badge</span>
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-text-dark dark:text-white">Perfil Profesional</h2>
-                        <p className="text-xs text-text-muted">Información visible en reportes y rutinas (Configurado en código).</p>
+                        <p className="text-xs text-text-muted">Gestionado por el administrador del sistema.</p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-                    <div className="size-12 bg-cover bg-center rounded-full" style={{ backgroundImage: `url(${PROFESSIONAL_PROFILE.image})` }}></div>
+                <div className="flex items-center gap-6">
+                    <div className="size-20 rounded-full bg-cover bg-center border-4 border-white dark:border-gray-800 shadow-md grayscale" style={{ backgroundImage: `url('${PROFESSIONAL_PROFILE.image}')` }}></div>
                     <div>
-                        <p className="font-bold text-text-dark dark:text-white">{PROFESSIONAL_PROFILE.name}</p>
-                        <p className="text-sm text-gray-500">Nivel ISAK: {PROFESSIONAL_PROFILE.isak_level}</p>
-                    </div>
-                    <div className="ml-auto">
-                        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 px-2 py-1 rounded">Solo Lectura</span>
+                        <h3 className="text-lg font-bold text-text-dark dark:text-white">{PROFESSIONAL_PROFILE.name}</h3>
+                        <p className="text-sm text-primary font-bold">Nivel ISAK {PROFESSIONAL_PROFILE.isak_level}</p>
+                        <p className="text-xs text-gray-400 mt-1">Configuración de perfil deshabilitada temporalmente.</p>
                     </div>
                 </div>
             </section>
