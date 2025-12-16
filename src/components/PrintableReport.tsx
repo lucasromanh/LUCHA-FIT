@@ -88,13 +88,13 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
     width: '210mm',
     height: '297mm',
     background: 'white',
-    padding: '20mm',
+    padding: '15mm', // Reduced padding
     fontFamily: 'Arial, sans-serif',
     fontSize: '10pt',
     lineHeight: '1.4',
     color: '#000',
     boxSizing: 'border-box',
-    overflow: 'hidden'
+    overflow: 'visible' // Allow content to be seen if it overflows slightly (though we try to fit it)
   };
 
   // Helper functions
@@ -152,6 +152,13 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
     if (Math.abs(endo - ecto) < 0.5 && meso < endo) return 'Endomorfo-Ectomorfo';
     return 'Balanceado';
   };
+
+  // ... (Methods remain same)
+
+  // ... (Render)
+
+  // ... (Inside the ANTHRO_SECTIONS map loop, around line 262)
+
 
   return (
     <div style={{ background: 'white' }}>
@@ -261,7 +268,15 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
 
             <div>
               <h3 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 15px 0', color: '#333' }}>Gráfico: Escore Z (Proporcionalidad)</h3>
-              <div style={{ backgroundColor: '#f9fafb', padding: '15px', borderRadius: '6px' }}>
+              <div style={{
+                backgroundColor: '#f9fafb',
+                padding: '15px',
+                borderRadius: '6px',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                columnGap: '20px',
+                rowGap: '10px'
+              }}>
                 {section.metrics.map((metric) => {
                   const curr = getMetricValue(currentRecord, section.id, metric.id);
                   const z = getZScore(curr, metric.id);
@@ -269,22 +284,36 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
                   const isPositive = z >= 0;
 
                   return (
-                    <div key={metric.id} style={{ marginBottom: '12px' }}>
-                      <div style={{ fontSize: '9pt', marginBottom: '5px', color: '#374151', fontWeight: '500' }}>
-                        {metric.label}: {z.toFixed(2)}
+                    <div key={metric.id} style={{ marginBottom: '5px' }}>
+                      <div style={{ fontSize: '8pt', marginBottom: '2px', color: '#374151', fontWeight: '500', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{metric.label}</span>
+                        <span>{z.toFixed(2)}</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', height: '20px' }}>
-                        <div style={{ flex: 1, borderRight: '2px solid #374151', height: '100%' }}></div>
-                        <div style={{ 
-                          width: `${barWidth}%`, 
-                          maxWidth: '50%',
-                          height: '100%',
-                          backgroundColor: Math.abs(z) > 2 ? '#ef4444' : Math.abs(z) > 1 ? '#f59e0b' : '#10b981',
-                          marginLeft: isPositive ? '0' : 'auto',
-                          marginRight: isPositive ? 'auto' : '0',
-                          borderRadius: '3px'
-                        }}></div>
-                        {!isPositive && <div style={{ flex: 1, borderLeft: '2px solid #374151', height: '100%' }}></div>}
+                      <div style={{ display: 'flex', alignItems: 'center', height: '16px' }}>
+                        <div style={{ flex: 1, borderRight: '1px solid #9ca3af', height: '100%', position: 'relative' }}>
+                          {!isPositive && (
+                            <div style={{
+                              position: 'absolute',
+                              right: 0,
+                              width: `${barWidth}%`,
+                              height: '100%',
+                              backgroundColor: Math.abs(z) > 2 ? '#ef4444' : Math.abs(z) > 1 ? '#f59e0b' : '#10b981',
+                              borderRadius: '2px 0 0 2px'
+                            }}></div>
+                          )}
+                        </div>
+                        <div style={{ flex: 1, borderLeft: '1px solid #9ca3af', height: '100%', position: 'relative' }}>
+                          {isPositive && (
+                            <div style={{
+                              position: 'absolute',
+                              left: 0,
+                              width: `${barWidth}%`,
+                              height: '100%',
+                              backgroundColor: Math.abs(z) > 2 ? '#ef4444' : Math.abs(z) > 1 ? '#f59e0b' : '#10b981',
+                              borderRadius: '0 2px 2px 0'
+                            }}></div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -343,16 +372,37 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
         <div style={{ display: 'flex', gap: '20px', marginBottom: '25px' }}>
           <div style={{ flex: 1 }}>
             <h3 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 15px 0' }}>Triángulo Somatotípico</h3>
-            <svg width="280" height="260" viewBox="0 0 200 180" style={{ border: '1px solid #e5e7eb' }}>
-              <polygon points="100,20 20,160 180,160" fill="none" stroke="#999" strokeWidth="1"/>
-              <text x="100" y="15" textAnchor="middle" fontSize="8" fontWeight="bold">ECTOMORFIA</text>
-              <text x="10" y="175" textAnchor="start" fontSize="8" fontWeight="bold">ENDOMORFIA</text>
-              <text x="190" y="175" textAnchor="end" fontSize="8" fontWeight="bold">MESOMORFIA</text>
-              
+            <svg width="280" height="260" viewBox="0 0 200 180" style={{ border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
+              {/* Background Triangle */}
+              <path d="M100 20 L20 160 L180 160 Z" fill="none" stroke="#e5e7eb" strokeWidth="2" />
+              {/* Internal grid lines (approximate for visual context) */}
+              <path d="M100 20 L100 160" fill="none" stroke="#f3f4f6" strokeWidth="1" />
+              <path d="M60 90 L180 160" fill="none" stroke="#f3f4f6" strokeWidth="1" />
+              <path d="M140 90 L20 160" fill="none" stroke="#f3f4f6" strokeWidth="1" />
+
+              {/* Labels */}
+              <text x="100" y="15" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#374151">ECTOMORFIA</text>
+              <text x="10" y="175" textAnchor="start" fontSize="10" fontWeight="bold" fill="#374151">ENDOMORFIA</text>
+              <text x="190" y="175" textAnchor="end" fontSize="10" fontWeight="bold" fill="#374151">MESOMORFIA</text>
+
+              {/* Plot Point */}
               {(() => {
-                const x = 100 + (calculations.somato.meso - calculations.somato.endo) * 6;
-                const y = 100 - calculations.somato.ecto * 6;
-                return <circle cx={x} cy={y} r="5" fill="#ef4444" stroke="#991b1b" strokeWidth="2"/>;
+                // Map Somatochart X,Y to SVG coordinates
+                const scale = 6;
+                const svgCenterX = 100;
+                const svgCenterY = 100; // Approximate visual center
+
+                const cx = svgCenterX + (calculations.somato.x * scale);
+                const cy = svgCenterY - (calculations.somato.y * scale);
+
+                return (
+                  <>
+                    <circle cx={cx} cy={cy} r="6" fill="#ef4444" stroke="white" strokeWidth="2" />
+                    <text x={cx} y={cy - 10} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#ef4444">
+                      You
+                    </text>
+                  </>
+                );
               })()}
             </svg>
           </div>
@@ -450,7 +500,7 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
 
         <div style={{ marginBottom: '25px' }}>
           <h3 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 15px 0' }}>Adiposidad y Muscularidad</h3>
-          
+
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', marginBottom: '20px' }}>
             <thead>
               <tr style={{ backgroundColor: '#4ade80', color: 'white' }}>
@@ -477,7 +527,7 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
           </table>
 
           <h3 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '20px 0 15px 0' }}>Muscularidad</h3>
-          
+
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', marginBottom: '20px' }}>
             <thead>
               <tr style={{ backgroundColor: '#4ade80', color: 'white' }}>
@@ -514,26 +564,24 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
           <div style={{ flex: '0 0 55%' }}>
             <h4 style={{ fontSize: '11pt', fontWeight: 'bold', marginBottom: '10px' }}>Gráfico: Perímetros</h4>
             <div style={{ height: '220px', border: '1px solid #e5e7eb', padding: '15px', backgroundColor: '#f9fafb' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={girthsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" style={{ fontSize: '9pt' }} />
-                  <YAxis style={{ fontSize: '9pt' }} />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: '9pt' }} />
-                  <Bar dataKey="value" fill="#3b82f6" name="Total" />
-                  <Bar dataKey="corrected" fill="#10b981" name="Corregido" />
-                </BarChart>
-              </ResponsiveContainer>
+              <BarChart width={350} height={190} data={girthsData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" style={{ fontSize: '9pt' }} />
+                <YAxis style={{ fontSize: '9pt' }} />
+                <Tooltip />
+                <Legend wrapperStyle={{ fontSize: '9pt' }} />
+                <Bar dataKey="value" fill="#3b82f6" name="Total" />
+                <Bar dataKey="corrected" fill="#10b981" name="Corregido" />
+              </BarChart>
             </div>
           </div>
 
           <div style={{ flex: '0 0 40%' }}>
             <h4 style={{ fontSize: '11pt', fontWeight: 'bold', marginBottom: '10px' }}>Distribución Corporal</h4>
             <div style={{ position: 'relative', textAlign: 'center', border: '1px solid #e5e7eb', padding: '15px', backgroundColor: '#f9fafb', height: '220px' }}>
-              <img 
-                src="/cuerpohumano.png" 
-                alt="Distribución corporal" 
+              <img
+                src="/cuerpohumano.png"
+                alt="Distribución corporal"
                 style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.8 }}
               />
               {/* LEFT SIDE: ADIPOSE PERCENTAGES */}
@@ -592,17 +640,15 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
         </h2>
 
         <h3 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 15px 0' }}>Perfil de Pliegues Cutáneos (mm)</h3>
-        
+
         <div style={{ height: '180px', border: '1px solid #e5e7eb', padding: '15px', backgroundColor: '#f9fafb', marginBottom: '25px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={skinfoldsProfileData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" style={{ fontSize: '9pt' }} />
-              <YAxis style={{ fontSize: '9pt' }} label={{ value: 'mm', angle: -90, position: 'insideLeft' }} />
-              <Tooltip />
-              <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <LineChart width={700} height={150} data={skinfoldsProfileData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" style={{ fontSize: '9pt' }} />
+            <YAxis style={{ fontSize: '9pt' }} label={{ value: 'mm', angle: -90, position: 'insideLeft' }} />
+            <Tooltip />
+            <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+          </LineChart>
         </div>
 
         <div style={{ display: 'flex', gap: '20px' }}>
@@ -692,7 +738,7 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
               const triceps = d.skinfolds.triceps;
 
               const getColor = (condition: boolean) => condition ? '#10b981' : condition === false ? '#ef4444' : '#f59e0b';
-              
+
               return (
                 <>
                   <tr style={{ backgroundColor: '#f9fafb' }}>

@@ -238,33 +238,31 @@ interface ExportData {
 const exportToExcel = (data: ExportData) => {
     const { client, currentRecord, prevRecord } = data;
 
-    // Sheet 1: Patient Info
-    const patientData = [
-        ['INFORME ANTROPOMÉTRICO ISAK'],
-        [`Evaluador: ${PROFESSIONAL_PROFILE.name}`],
-        [`ISAK Nivel ${PROFESSIONAL_PROFILE.isak_level}`],
-        [],
-        ['DATOS DEL PACIENTE'],
-        ['Nombre', client.name],
-        ['ID', client.id],
-        ['Edad', `${client.age} años`],
-        ['Género', client.gender],
-        ['Objetivo', client.goal],
-        [],
-        ['EVALUACIONES'],
-        ['Tipo', 'Fecha', 'Evaluador'],
-        ['Evaluación Actual', currentRecord.date, currentRecord.evaluator],
-        ['Evaluación Previa', prevRecord ? prevRecord.date : 'N/A', prevRecord ? prevRecord.evaluator : 'N/A'],
-    ];
+    // Master Array for Single Sheet
+    const sheetData: any[][] = [];
 
-    // Sheet 2-5: Measurements by Section
-    const measurementsSheets: any = {};
+    // 1. HEADER & PATIENT INFO
+    sheetData.push(['INFORME ANTROPOMÉTRICO ISAK']);
+    sheetData.push([`Evaluador: ${PROFESSIONAL_PROFILE.name}`]);
+    sheetData.push([`ISAK Nivel ${PROFESSIONAL_PROFILE.isak_level}`]);
+    sheetData.push([]);
+    sheetData.push(['DATOS DEL PACIENTE']);
+    sheetData.push(['Nombre', client.name]);
+    sheetData.push(['ID', client.id]);
+    sheetData.push(['Edad', `${client.age} años`]);
+    sheetData.push(['Género', client.gender]);
+    sheetData.push(['Objetivo', client.goal]);
+    sheetData.push([]);
+    sheetData.push(['EVALUACIONES']);
+    sheetData.push(['Tipo', 'Fecha', 'Evaluador']);
+    sheetData.push(['Evaluación Actual', currentRecord.date, currentRecord.evaluator]);
+    sheetData.push(['Evaluación Previa', prevRecord ? prevRecord.date : 'N/A', prevRecord ? prevRecord.evaluator : 'N/A']);
+    sheetData.push([]);
+
+    // 2. MEASUREMENTS (All Sections in one flow)
     ANTHRO_SECTIONS.forEach((section) => {
-        const sheetData = [
-            [section.title.toUpperCase()],
-            [],
-            ['Medida', 'Unidad', 'Actual', 'Previa', 'Diferencia', '% Cambio', 'Z-Score'],
-        ];
+        sheetData.push([section.title.toUpperCase()]);
+        sheetData.push(['Medida', 'Unidad', 'Actual', 'Previa', 'Diferencia', '% Cambio', 'Z-Score']);
 
         section.metrics.forEach(metric => {
             const curr = getMetricValue(currentRecord, section.id, metric.id);
@@ -276,121 +274,104 @@ const exportToExcel = (data: ExportData) => {
             sheetData.push([
                 metric.label,
                 metric.unit,
-                curr.toString(),
-                prev ? prev.toString() : 'N/A',
+                curr,
+                prev ? prev : 'N/A',
                 prev ? diff.toFixed(1) : 'N/A',
                 prev ? `${percent.toFixed(1)}%` : 'N/A',
                 z.toFixed(2),
             ]);
         });
-
-        measurementsSheets[section.title] = sheetData;
+        sheetData.push([]); // Spacer
     });
 
-    // Sheet 6: Body Composition
-    const compositionData = [
-        ['COMPOSICIÓN CORPORAL'],
-        [],
-        ['Componente', 'Valor'],
-        ['% Grasa Corporal (Faulkner)', `${data.bodyFatPerc.toFixed(1)}%`],
-        ['Masa Grasa', `${data.fatMass.toFixed(1)} kg`],
-        ['Masa Muscular', `${data.muscleMass.toFixed(1)} kg`],
-        ['Masa Ósea', `${data.boneMass.toFixed(1)} kg`],
-        ['Suma 6 Pliegues', `${data.sum6.toFixed(1)} mm`],
-        ['Suma 8 Pliegues', `${data.sum8.toFixed(1)} mm`],
-        [],
-        ['SOMATOTIPO'],
-        ['Componente', 'Valor'],
-        ['Endomorfia', data.somato.endo.toFixed(1)],
-        ['Mesomorfia', data.somato.meso.toFixed(1)],
-        ['Ectomorfia', data.somato.ecto.toFixed(1)],
-        ['Coordenada X', data.somato.x.toFixed(2)],
-        ['Coordenada Y', data.somato.y.toFixed(2)],
-        [],
-        ['PERÍMETROS CORREGIDOS'],
-        ['Perímetro', 'Valor Corregido'],
-        ['Brazo', `${data.armCorr.toFixed(1)} cm`],
-        ['Muslo', `${data.thighCorr.toFixed(1)} cm`],
-        ['Pierna', `${data.calfCorr.toFixed(1)} cm`],
-    ];
+    // 3. BODY COMPOSITION
+    sheetData.push(['COMPOSICIÓN CORPORAL']);
+    sheetData.push(['Componente', 'Valor']);
+    sheetData.push(['% Grasa Corporal (Faulkner)', `${data.bodyFatPerc.toFixed(1)}%`]);
+    sheetData.push(['Masa Grasa', `${data.fatMass.toFixed(1)} kg`]);
+    sheetData.push(['Masa Muscular', `${data.muscleMass.toFixed(1)} kg`]);
+    sheetData.push(['Masa Ósea', `${data.boneMass.toFixed(1)} kg`]);
+    sheetData.push(['Suma 6 Pliegues', `${data.sum6.toFixed(1)} mm`]);
+    sheetData.push(['Suma 8 Pliegues', `${data.sum8.toFixed(1)} mm`]);
+    sheetData.push([]);
 
-    // Sheet 7: Indices & Health
+    // 4. SOMATOTYPE
+    sheetData.push(['SOMATOTIPO']);
+    sheetData.push(['Componente', 'Valor']);
+    sheetData.push(['Endomorfia', data.somato.endo.toFixed(1)]);
+    sheetData.push(['Mesomorfia', data.somato.meso.toFixed(1)]);
+    sheetData.push(['Ectomorfia', data.somato.ecto.toFixed(1)]);
+    sheetData.push(['Coordenada X', data.somato.x.toFixed(2)]);
+    sheetData.push(['Coordenada Y', data.somato.y.toFixed(2)]);
+    sheetData.push([]);
+
+    // 5. CORRECTED GIRTHS & DISTRIBUTION
     const d = currentRecord.data;
+    sheetData.push(['DISTRIBUCIÓN ADIPOSO-MUSCULAR']);
+    sheetData.push(['PERÍMETROS CORREGIDOS']);
+    sheetData.push(['Perímetro', 'Total (cm)', 'Corregido (cm)', 'Z-Score', '% Muscular']);
+    sheetData.push(['Brazo', d.girths.arm_relaxed.toFixed(1), data.armCorr.toFixed(1), data.zArmCorr.toFixed(2), `${data.armPerc.toFixed(1)}%`]);
+    sheetData.push(['Muslo', d.girths.mid_thigh.toFixed(1), data.thighCorr.toFixed(1), data.zThighCorr.toFixed(2), `${data.thighPerc.toFixed(1)}%`]);
+    sheetData.push(['Pierna', d.girths.calf_girth.toFixed(1), data.calfCorr.toFixed(1), data.zCalfCorr.toFixed(2), `${data.calfPerc.toFixed(1)}%`]);
+    sheetData.push([]);
+
+    sheetData.push(['DISTRIBUCIÓN TEJIDO ADIPOSO']);
+    sheetData.push(['Región', 'Porcentaje']);
+    sheetData.push(['Superior (Tríceps + Subescapular + Bíceps)', `${data.adiposeSuperior.toFixed(1)}%`]);
+    sheetData.push(['Central (Abdominal + Supraespinal + Cresta Ilíaca)', `${data.adiposeCentral.toFixed(1)}%`]);
+    sheetData.push(['Inferior (Muslo + Pantorrilla)', `${data.adiposeInferior.toFixed(1)}%`]);
+    sheetData.push([]);
+
+    // 6. HEALTH INDICES
     const bmi = d.basic.mass / Math.pow(d.basic.stature / 100, 2);
     const waistHipRatio = d.girths.waist / d.girths.hips;
 
-    const healthData = [
-        ['ÍNDICES DE SALUD'],
-        [],
-        ['Indicador', 'Valor', 'Rango Saludable', 'Interpretación'],
-        ['Perímetro Cintura', `${d.girths.waist} cm`, '70-90 cm', d.girths.waist > 90 ? 'Riesgo aumentado' : 'Normal'],
-        ['Índice Cintura/Cadera', waistHipRatio.toFixed(2), '< 0.84', waistHipRatio > 0.85 ? 'Riesgo moderado' : 'Normal'],
-        ['Índice de Conicidad', data.conicityIndex.toFixed(2), '1.0-1.4', ''],
-        ['Pliegue Abdominal', `${d.skinfolds.abdominal} mm`, '< 12 mm', d.skinfolds.abdominal > 12 ? 'Excesivo' : 'Normal'],
-        ['IMC', bmi.toFixed(1), '18.5-24.9', bmi > 25 ? 'Sobrepeso' : 'Normal'],
-        ['Pliegue Tríceps', `${d.skinfolds.triceps} mm`, '< 12 mm', d.skinfolds.triceps > 15 ? 'Excesivo' : 'Normal'],
-    ];
+    sheetData.push(['ÍNDICES DE SALUD']);
+    sheetData.push(['Indicador', 'Valor', 'Rango Saludable', 'Interpretación']);
+    sheetData.push(['Perímetro Cintura', `${d.girths.waist} cm`, '70-90 cm', d.girths.waist > 90 ? 'Riesgo aumentado' : 'Normal']);
+    sheetData.push(['Índice Cintura/Cadera', waistHipRatio.toFixed(2), '< 0.84', waistHipRatio > 0.85 ? 'Riesgo moderado' : 'Normal']);
+    sheetData.push(['Índice de Conicidad', data.conicityIndex.toFixed(2), '1.0-1.4', '']);
+    sheetData.push(['Pliegue Abdominal', `${d.skinfolds.abdominal} mm`, '< 12 mm', d.skinfolds.abdominal > 12 ? 'Excesivo' : 'Normal']);
+    sheetData.push(['IMC', bmi.toFixed(1), '18.5-24.9', bmi > 25 ? 'Sobrepeso' : 'Normal']);
+    sheetData.push(['Pliegue Tríceps', `${d.skinfolds.triceps} mm`, '< 12 mm', d.skinfolds.triceps > 15 ? 'Excesivo' : 'Normal']);
+    sheetData.push([]);
 
-    const performanceData = [
-        ['ÍNDICES DE RENDIMIENTO'],
-        [],
-        ['Indicador', 'Valor', 'Clasificación'],
-        ['Diferencia Brazo Contraído - Relajado', `${(d.girths.arm_flexed - d.girths.arm_relaxed).toFixed(1)} cm`, 'Desarrollo muscular'],
-        ['Área Superficie Corporal', `${data.bsa.toFixed(2)} m²`, 'Valor normal: 1.9 m²'],
-        ['Índice de Pérdida de Calor (IPC)', data.ipc.toFixed(0), 'Mayor área = mayor disipación'],
-        ['Índice Córmico', data.cormic.toFixed(2), 'Proporción tronco/talla'],
-        ['Índice de Manouvrier', data.manouvrier.toFixed(0), 'Longitud miembros inferiores'],
-        ['Envergadura Relativa', data.relativeSpan.toFixed(2), 'Envergadura/talla'],
-        ['Índice Adiposo-Muscular', data.adiposeMuscleIndex.toFixed(2), 'Kg grasa por kg músculo'],
-        ['Índice Músculo-Óseo', data.muscleBoneIndex.toFixed(2), 'Desarrollo muscular vs estructura ósea'],
-        [],
-        ['GASTO ENERGÉTICO'],
-        ['Parámetro', 'Valor', 'Interpretación'],
-        ['Metabolismo Basal (BMR)', `${data.bmr.toFixed(0)} kcal/día`, 'Harris & Benedict (1919)'],
-        ['Gasto Energético Total (TDEE)', `${data.tdee.toFixed(0)} kcal/día`, 'Factor actividad: 1.5'],
-    ];
+    // 7. PERFORMANCE INDICES
+    sheetData.push(['ÍNDICES DE RENDIMIENTO']);
+    sheetData.push(['Indicador', 'Valor', 'Clasificación']);
+    sheetData.push(['Diferencia Brazo Contraído - Relajado', `${(d.girths.arm_flexed - d.girths.arm_relaxed).toFixed(1)} cm`, 'Desarrollo muscular']);
+    sheetData.push(['Área Superficie Corporal', `${data.bsa.toFixed(2)} m²`, 'Valor normal: 1.9 m²']);
+    sheetData.push(['Índice de Pérdida de Calor (IPC)', data.ipc.toFixed(0), 'Mayor área = mayor disipación']);
+    sheetData.push(['Índice Córmico', data.cormic.toFixed(2), 'Proporción tronco/talla']);
+    sheetData.push(['Índice de Manouvrier', data.manouvrier.toFixed(0), 'Longitud miembros inferiores']);
+    sheetData.push(['Envergadura Relativa', data.relativeSpan.toFixed(2), 'Envergadura/talla']);
+    sheetData.push(['Índice Adiposo-Muscular', data.adiposeMuscleIndex.toFixed(2), 'Kg grasa por kg músculo']);
+    sheetData.push(['Índice Músculo-Óseo', data.muscleBoneIndex.toFixed(2), 'Desarrollo muscular vs estructura ósea']);
+    sheetData.push([]);
 
-    const distributionData = [
-        ['DISTRIBUCIÓN ADIPOSO-MUSCULAR'],
-        [],
-        ['PERÍMETROS CORREGIDOS'],
-        ['Perímetro', 'Total (cm)', 'Corregido (cm)', 'Z-Score', '% Muscular'],
-        ['Brazo', d.girths.arm_relaxed.toFixed(1), data.armCorr.toFixed(1), data.zArmCorr.toFixed(2), `${data.armPerc.toFixed(1)}%`],
-        ['Muslo', d.girths.mid_thigh.toFixed(1), data.thighCorr.toFixed(1), data.zThighCorr.toFixed(2), `${data.thighPerc.toFixed(1)}%`],
-        ['Pierna', d.girths.calf_girth.toFixed(1), data.calfCorr.toFixed(1), data.zCalfCorr.toFixed(2), `${data.calfPerc.toFixed(1)}%`],
-        [],
-        ['DISTRIBUCIÓN TEJIDO ADIPOSO'],
-        ['Región', 'Porcentaje'],
-        ['Superior (Tríceps + Subescapular + Bíceps)', `${data.adiposeSuperior.toFixed(1)}%`],
-        ['Central (Abdominal + Supraespinal + Cresta Ilíaca)', `${data.adiposeCentral.toFixed(1)}%`],
-        ['Inferior (Muslo + Pantorrilla)', `${data.adiposeInferior.toFixed(1)}%`],
-    ];
+    // 8. ENERGY
+    sheetData.push(['GASTO ENERGÉTICO']);
+    sheetData.push(['Parámetro', 'Valor', 'Interpretación']);
+    sheetData.push(['Metabolismo Basal (BMR)', `${data.bmr.toFixed(0)} kcal/día`, 'Harris & Benedict (1919)']);
+    sheetData.push(['Gasto Energético Total (TDEE)', `${data.tdee.toFixed(0)} kcal/día`, 'Factor actividad: 1.5']);
 
-    // Create workbook
+    // Create workbook and write single sheet
     const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
-    // Add sheets
-    const ws1 = XLSX.utils.aoa_to_sheet(patientData);
-    XLSX.utils.book_append_sheet(wb, ws1, 'Datos Paciente');
+    // Auto-width for columns (Basic approximation)
+    const wscols = [
+        { wch: 30 }, // A
+        { wch: 20 }, // B
+        { wch: 15 }, // C
+        { wch: 15 }, // D
+        { wch: 15 }, // E
+        { wch: 15 }, // F
+        { wch: 15 }, // G
+    ];
+    ws['!cols'] = wscols;
 
-    Object.entries(measurementsSheets).forEach(([name, data]) => {
-        const ws = XLSX.utils.aoa_to_sheet(data as any[][]);
-        XLSX.utils.book_append_sheet(wb, ws, name.substring(0, 31)); // Excel sheet name limit
-    });
-
-    const ws6 = XLSX.utils.aoa_to_sheet(compositionData);
-    XLSX.utils.book_append_sheet(wb, ws6, 'Composición');
-
-    const ws7 = XLSX.utils.aoa_to_sheet(distributionData);
-    XLSX.utils.book_append_sheet(wb, ws7, 'Distribución A-M');
-
-    const ws8 = XLSX.utils.aoa_to_sheet(healthData);
-    XLSX.utils.book_append_sheet(wb, ws8, 'Índices Salud');
-
-    const ws9 = XLSX.utils.aoa_to_sheet(performanceData);
-    XLSX.utils.book_append_sheet(wb, ws9, 'Rendimiento');
-
-    // Save file
+    XLSX.utils.book_append_sheet(wb, ws, 'Informe Completo');
     XLSX.writeFile(wb, `Informe_Completo_${client.name.replace(/\s+/g, '_')}_${currentRecord.date}.xlsx`);
 };
 

@@ -300,6 +300,37 @@ const Routines: React.FC = () => {
 
         const fileName = `Rutina_${selectedClient.name.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}`;
 
+        // FETCH FULL DATA IF SESSIONS ARE MISSING (Crucial for List View export)
+        let routineToPrint = routine;
+        if (!routine.sessions || routine.sessions.length === 0) {
+            try {
+                const res = await routinesApi.getById(routine.id);
+                if (res.success && res.data) {
+                    // Map (Quick map for print)
+                    const r = res.data;
+                    routineToPrint = {
+                        ...r,
+                        id: r.id,
+                        patientId: r.patient_id || r.patientId,
+                        title: r.title,
+                        objective: r.objective,
+                        sport: r.sport,
+                        level: r.level,
+                        frequency: r.frequency,
+                        status: r.status,
+                        createdAt: r.created_at || r.createdAt,
+                        sessions: (r.sessions || []).map((s: any) => ({
+                            ...s, exercises: s.exercises || []
+                        }))
+                    };
+                }
+            } catch (e) {
+                console.error("Failed to fetch full routine for export", e);
+                alert("No se pudieron cargar los detalles de la rutina.");
+                return;
+            }
+        }
+
         if (type === 'pdf') {
             // Create a temporary container for the PDF content
             const tempContainer = document.createElement('div');
@@ -309,45 +340,6 @@ const Routines: React.FC = () => {
             tempContainer.style.width = '800px'; // A4 width approx
             tempContainer.style.backgroundColor = '#ffffff';
             document.body.appendChild(tempContainer);
-
-            // Fetch full data if sessions are missing (just in case, though likely passing summary routine for download)
-            // Ideally we should ensure we have full data. 
-            // If routine.sessions is empty/undefined, we might need to fetch. 
-            // But let's assume for "Client Details" view we might need to fetch if the list was summary only.
-            // The list view mapping logic in 'loadClientRoutines' DOES NOT map sessions.
-            // So 'routine' passed here from list view DOES NOT have sessions.
-            // WE MUST FETCH DETAILS FIRST if sessions are missing!
-
-            let routineToPrint = routine;
-            if (!routine.sessions || routine.sessions.length === 0) {
-                try {
-                    const res = await routinesApi.getById(routine.id);
-                    if (res.success && res.data) {
-                        // Map (Quick map for print)
-                        const r = res.data;
-                        routineToPrint = {
-                            ...r,
-                            id: r.id,
-                            patientId: r.patient_id || r.patientId,
-                            title: r.title,
-                            objective: r.objective,
-                            sport: r.sport,
-                            level: r.level,
-                            frequency: r.frequency,
-                            status: r.status,
-                            createdAt: r.created_at || r.createdAt,
-                            sessions: (r.sessions || []).map((s: any) => ({
-                                ...s, exercises: s.exercises || []
-                            }))
-                        };
-                    }
-                } catch (e) {
-                    console.error("Failed to fetch full routine for PDF", e);
-                    alert("No se pudieron cargar los detalles para el PDF.");
-                    document.body.removeChild(tempContainer);
-                    return;
-                }
-            }
 
             // Generate HTML Content (Reusing the print template logic but optimized for capture)
             tempContainer.innerHTML = `
@@ -436,7 +428,7 @@ const Routines: React.FC = () => {
 
         } else {
             // ... Existing XLS logic (kept concise for replacement)
-            const xlsContent = generateXLSContent(routine, selectedClient.name);
+            const xlsContent = generateXLSContent(routineToPrint, selectedClient.name);
             const blob = new Blob([xlsContent], { type: 'application/vnd.ms-excel' });
             const file = new File([blob], fileName + '.xls', { type: 'application/vnd.ms-excel' });
 

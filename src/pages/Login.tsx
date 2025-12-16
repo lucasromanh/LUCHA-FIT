@@ -30,7 +30,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
 
     try {
       const response = await authApi.login(email, password);
-      
+
       if (response.success && response.data) {
         // Guardar o eliminar email según checkbox
         if (rememberMe) {
@@ -38,11 +38,11 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
         } else {
           localStorage.removeItem('luchafit_saved_email');
         }
-        
+
         // Guardar token y usuario en localStorage
         localStorage.setItem('luchafit_token', response.data.token);
         localStorage.setItem('luchafit_user', JSON.stringify(response.data.user));
-        
+
         // Llamar al callback de login exitoso
         onLogin();
       } else {
@@ -50,7 +50,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
       }
     } catch (err) {
       setError('Error de conexión con el servidor');
-      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }
@@ -137,8 +136,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
               {/* Extras */}
               <div className="flex flex-wrap items-center justify-between gap-y-2 mt-1">
                 <label className="flex items-center gap-2 cursor-pointer group">
-                  <input 
-                    className="h-5 w-5 rounded border-input-border bg-white dark:bg-[#1a3324] text-primary focus:ring-offset-0 focus:ring-2 focus:ring-primary/20 transition-colors cursor-pointer" 
+                  <input
+                    className="h-5 w-5 rounded border-input-border bg-white dark:bg-[#1a3324] text-primary focus:ring-offset-0 focus:ring-2 focus:ring-primary/20 transition-colors cursor-pointer"
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}

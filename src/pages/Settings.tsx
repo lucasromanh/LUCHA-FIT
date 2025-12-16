@@ -66,11 +66,12 @@ const Settings: React.FC = () => {
                 // Given the constraint, I'll try to read `luchafit_token` which is standard. If not, I'll alert user.
 
                 // NOTE: Based on auth.php, it returns { token, user }. Login.tsx *should* save this.
-                const storedToken = localStorage.getItem('luchafit_jwt'); // Trying common name or verify with user.
+                const storedToken = localStorage.getItem('luchafit_token');
 
-                // Actually, let's just try to fetch.
+                if (!storedToken) return;
+
                 // Fetch from auth endpoint
-                const res = await fetch('/api/auth.php', { headers: { 'Authorization': `Bearer ${storedToken || ''}` } });
+                const res = await fetch('/api/auth.php', { headers: { 'Authorization': `Bearer ${storedToken}` } });
 
                 if (res.ok) {
                     const responseData = await res.json();
@@ -86,7 +87,8 @@ const Settings: React.FC = () => {
                     }
                 }
             } catch (error) {
-                console.error("Error loading profile", error);
+                // Silently fail or minimal log
+                // console.warn("Could not load profile");
             }
         };
         fetchProfile();
