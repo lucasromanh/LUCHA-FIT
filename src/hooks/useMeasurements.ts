@@ -40,6 +40,11 @@ export interface MeasurementRecord {
   humerus?: number;
   bistyloid?: number;
   femur?: number;
+  biacromial?: number;
+  biiliocristal?: number;
+  foot_length?: number;
+  transverse_chest?: number;
+  ap_chest_depth?: number;
 
   // Cálculos del backend (NUNCA se calculan en el frontend)
   bmi?: number;
@@ -95,10 +100,15 @@ const transformToBackend = (data: Partial<MeasurementRecord>): any => {
     mid_thigh: anthroData.girths?.mid_thigh,
     calf_girth: anthroData.girths?.calf_girth,
 
-    // Breadths (3 campos)
+    // Breadths (3 campos + 5 nuevos)
     humerus: anthroData.breadths?.humerus,
     bistyloid: anthroData.breadths?.bistyloid,
-    femur: anthroData.breadths?.femur
+    femur: anthroData.breadths?.femur,
+    biacromial: anthroData.breadths?.biacromial,
+    biiliocristal: anthroData.breadths?.biiliocristal,
+    foot_length: anthroData.breadths?.foot_length,
+    transverse_chest: anthroData.breadths?.transverse_chest,
+    ap_chest_depth: anthroData.breadths?.ap_chest_depth
   };
 };
 
@@ -141,7 +151,12 @@ const transformToFrontend = (backendData: any): MeasurementRecord => {
       breadths: {
         humerus: parseFloat(backendData.humerus) || 0,
         bistyloid: parseFloat(backendData.bistyloid) || 0,
-        femur: parseFloat(backendData.femur) || 0
+        femur: parseFloat(backendData.femur) || 0,
+        biacromial: parseFloat(backendData.biacromial) || 0,
+        biiliocristal: parseFloat(backendData.biiliocristal) || 0,
+        foot_length: parseFloat(backendData.foot_length) || 0,
+        transverse_chest: parseFloat(backendData.transverse_chest) || 0,
+        ap_chest_depth: parseFloat(backendData.ap_chest_depth) || 0
       }
     },
     // Cálculos del backend (estos VIENEN del servidor, NO se calculan aquí)
@@ -183,7 +198,7 @@ export const useMeasurements = (clientId?: string) => {
       setMeasurements(transformed);
     } catch (err: any) {
       setError(err.message || 'Error al cargar mediciones');
-      console.error('Error loading measurements:', err);
+      // console.error('Error loading measurements:', err);
     } finally {
       setLoading(false);
     }

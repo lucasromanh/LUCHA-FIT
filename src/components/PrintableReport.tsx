@@ -392,8 +392,12 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
                 const svgCenterX = 100;
                 const svgCenterY = 100; // Approximate visual center
 
-                const cx = svgCenterX + (calculations.somato.x * scale);
-                const cy = svgCenterY - (calculations.somato.y * scale);
+                let cx = svgCenterX + (calculations.somato.x * scale);
+                let cy = svgCenterY - (calculations.somato.y * scale);
+
+                // Clamp to viewbox to ensure point is visible even for outliers
+                cx = Math.max(10, Math.min(190, cx));
+                cy = Math.max(10, Math.min(170, cy));
 
                 return (
                   <>
@@ -563,8 +567,8 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
         <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
           <div style={{ flex: '0 0 55%' }}>
             <h4 style={{ fontSize: '11pt', fontWeight: 'bold', marginBottom: '10px' }}>Gráfico: Perímetros</h4>
-            <div style={{ height: '220px', border: '1px solid #e5e7eb', padding: '15px', backgroundColor: '#f9fafb' }}>
-              <BarChart width={350} height={190} data={girthsData}>
+            <div style={{ height: '300px', border: '1px solid #e5e7eb', padding: '15px', backgroundColor: '#f9fafb' }}>
+              <BarChart width={350} height={250} data={girthsData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" style={{ fontSize: '9pt' }} />
                 <YAxis style={{ fontSize: '9pt' }} />
@@ -578,7 +582,7 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
 
           <div style={{ flex: '0 0 40%' }}>
             <h4 style={{ fontSize: '11pt', fontWeight: 'bold', marginBottom: '10px' }}>Distribución Corporal</h4>
-            <div style={{ position: 'relative', textAlign: 'center', border: '1px solid #e5e7eb', padding: '15px', backgroundColor: '#f9fafb', height: '220px' }}>
+            <div style={{ position: 'relative', textAlign: 'center', border: '1px solid #e5e7eb', padding: '15px', backgroundColor: '#f9fafb', height: '300px' }}>
               <img
                 src="/cuerpohumano.png"
                 alt="Distribución corporal"
@@ -650,6 +654,25 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
             <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
           </LineChart>
         </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', marginBottom: '25px' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#f3f4f6' }}>
+              {skinfoldsProfileData.map((d) => (
+                <th key={d.name} style={{ padding: '8px', border: '1px solid #d1d5db', textAlign: 'center' }}>{d.name}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              {skinfoldsProfileData.map((d) => (
+                <td key={d.name} style={{ padding: '8px', border: '1px solid #d1d5db', textAlign: 'center' }}>
+                  {d.value.toFixed(1)}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
 
         <div style={{ display: 'flex', gap: '20px' }}>
           <div style={{ flex: 1 }}>

@@ -85,6 +85,11 @@ export interface AnthropometricData {
     humerus: number;
     bistyloid: number;
     femur: number;
+    biacromial: number;
+    biiliocristal: number;
+    foot_length: number;
+    transverse_chest: number;
+    ap_chest_depth: number;
   };
 }
 

@@ -59,9 +59,14 @@ const ANTHRO_SECTIONS = [
         title: '4. Diámetros Óseos',
         icon: 'accessibility_new',
         metrics: [
-            { id: 'humerus', num: 19, label: 'Húmero', unit: 'cm' },
-            { id: 'bistyloid', num: 20, label: 'Biestiloideo', unit: 'cm' },
-            { id: 'femur', num: 21, label: 'Fémur', unit: 'cm' },
+            { id: 'biacromial', num: 19, label: 'Biacromial', unit: 'cm' },
+            { id: 'biiliocristal', num: 20, label: 'Biiliocristal', unit: 'cm' },
+            { id: 'foot_length', num: 21, label: 'Long. Pie', unit: 'cm' },
+            { id: 'transverse_chest', num: 22, label: 'Tórax Trans.', unit: 'cm' },
+            { id: 'ap_chest_depth', num: 23, label: 'Prof. AP Tórax', unit: 'cm' },
+            { id: 'humerus', num: 24, label: 'Húmero', unit: 'cm' },
+            { id: 'femur', num: 25, label: 'Fémur', unit: 'cm' },
+            { id: 'bistyloid', num: 26, label: 'Biestiloideo', unit: 'cm' },
         ]
     }
 ];
@@ -86,7 +91,12 @@ const PHANTOM_REF: Record<string, { mean: number; sd: number }> = {
     calf_girth: { mean: 36, sd: 3 },
     humerus: { mean: 7, sd: 0.5 },
     femur: { mean: 9.5, sd: 0.6 },
-    bistyloid: { mean: 5.5, sd: 0.4 }
+    bistyloid: { mean: 5.5, sd: 0.4 },
+    biacromial: { mean: 37.72, sd: 2 }, // Added
+    biiliocristal: { mean: 27.34, sd: 1.5 }, // Added
+    foot_length: { mean: 25.76, sd: 1.2 }, // Added
+    transverse_chest: { mean: 27.15, sd: 1.5 }, // Added
+    ap_chest_depth: { mean: 18.60, sd: 1.2 } // Added
 };
 
 interface MeasurementValues {
@@ -780,9 +790,14 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
                     calf_girth: parseFloat(calculateFinalValue('calf_girth', 'girths')) || 0
                 },
                 breadths: {
+                    biacromial: parseFloat(calculateFinalValue('biacromial', 'breadths')) || 0,
+                    biiliocristal: parseFloat(calculateFinalValue('biiliocristal', 'breadths')) || 0,
+                    foot_length: parseFloat(calculateFinalValue('foot_length', 'breadths')) || 0,
+                    transverse_chest: parseFloat(calculateFinalValue('transverse_chest', 'breadths')) || 0,
+                    ap_chest_depth: parseFloat(calculateFinalValue('ap_chest_depth', 'breadths')) || 0,
                     humerus: parseFloat(calculateFinalValue('humerus', 'breadths')) || 0,
-                    bistyloid: parseFloat(calculateFinalValue('bistyloid', 'breadths')) || 0,
-                    femur: parseFloat(calculateFinalValue('femur', 'breadths')) || 0
+                    femur: parseFloat(calculateFinalValue('femur', 'breadths')) || 0,
+                    bistyloid: parseFloat(calculateFinalValue('bistyloid', 'breadths')) || 0
                 }
             };
 
