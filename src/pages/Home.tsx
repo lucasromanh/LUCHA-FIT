@@ -83,11 +83,22 @@ const Home: React.FC<HomeProps> = ({ onNavigate, existingAppointments = [], onRe
     setFormData(prev => ({ ...prev, date: dateValue, time: '' }));
   };
 
-  // Defined Time Slots
-  const baseSlots = [
-    '09:00', '10:00', '11:00', '12:00', '13:00',
-    '14:00', '15:00', '16:00', '17:00'
-  ];
+  // Dynamic Time Slots based on Configuration
+  const baseSlots = useMemo(() => {
+    const savedConfig = localStorage.getItem('lucha_working_hours');
+    const config = savedConfig
+      ? JSON.parse(savedConfig)
+      : { start: '08:00', end: '20:00' };
+
+    const slots = [];
+    const [startHour] = config.start.split(':').map(Number);
+    const [endHour] = config.end.split(':').map(Number);
+
+    for (let h = startHour; h < endHour; h++) {
+      slots.push(`${String(h).padStart(2, '0')}:00`);
+    }
+    return slots;
+  }, [isModalOpen]); // Re-calculate when modal opens to get latest config
 
   const getSlotStatus = (slot: string) => {
     if (!formData.date) return { disabled: true, reason: 'no_date' };

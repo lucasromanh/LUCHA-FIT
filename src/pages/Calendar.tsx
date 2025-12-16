@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Appointment } from '../types';
 import AppointmentModal from '../components/AppointmentModal';
+import NetworkStatusModal from '../components/NetworkStatusModal';
 import { appointmentsApi } from '../services/api';
 
 declare var gapi: any;
 declare var google: any;
 
-// Google Calendar API configuration (from environment variables)
 // Google Calendar API configuration (from environment variables)
 // Clean potential quotes or semicolons from env file
 const CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').replace(/['";]/g, '').trim();
@@ -43,6 +43,10 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
     const [viewMode, setViewMode] = useState<'week' | 'month' | 'day'>('week');
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
+    // Network Error State
+    const [showNetworkError, setShowNetworkError] = useState(false);
+    const [networkErrorMessage, setNetworkErrorMessage] = useState('');
+
     // Date Management - Default to Today
     const [currentDate, setCurrentDate] = useState(new Date());
     const [showConfigModal, setShowConfigModal] = useState(false);
@@ -51,6 +55,50 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
     const [showAppointmentModal, setShowAppointmentModal] = useState(false);
     const [appointmentModalData, setAppointmentModalData] = useState<{ date?: Date; time?: string }>({});
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    // Configuration Modal State
+    const [configWorkingHours, setConfigWorkingHours] = useState({ start: '08:00', end: '20:00' });
+    const [configDefaultColor, setConfigDefaultColor] = useState('bg-blue-500');
+
+    // Load Config whenever modal opens
+    useEffect(() => {
+        if (showConfigModal) {
+            const savedHours = localStorage.getItem('lucha_working_hours');
+            if (savedHours) {
+                try {
+                    const parsed = JSON.parse(savedHours);
+                    setConfigWorkingHours({ start: parsed.start, end: parsed.end });
+                } catch (e) { console.error("Error parsing hours", e); }
+            }
+
+            const savedColor = localStorage.getItem('lucha_event_default_color');
+            if (savedColor) {
+                setConfigDefaultColor(savedColor);
+            }
+        }
+    }, [showConfigModal]);
+
+    const handleSaveConfig = () => {
+        // Save Working Hours
+        const existingConfigStr = localStorage.getItem('lucha_working_hours');
+        let newConfig = { days: [1, 2, 3, 4, 5], start: configWorkingHours.start, end: configWorkingHours.end };
+        if (existingConfigStr) {
+            try {
+                const existing = JSON.parse(existingConfigStr);
+                newConfig = { ...existing, start: configWorkingHours.start, end: configWorkingHours.end };
+            } catch (e) { }
+        }
+        localStorage.setItem('lucha_working_hours', JSON.stringify(newConfig));
+
+        // Save Color
+        localStorage.setItem('lucha_event_default_color', configDefaultColor);
+
+        // Force refresh or just close
+        setShowConfigModal(false);
+        // Refresh grid by triggering a shallow update if needed, but localStorage read happends on render in grid helper
+        // We might need to force re-render. Setting currentDate to new Date(currentDate) works.
+        setCurrentDate(new Date(currentDate));
+    };
 
     // Reset delete confirmation when event selection changes
     useEffect(() => {
@@ -141,7 +189,8 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
                 });
                 setGapiInited(true);
             } catch (err) {
-                console.error("Error initializing GAPI client", err);
+                // Log simplified error
+                console.error("GAPI Init Error");
                 setErrorMsg("Error iniciando Google API. Verifique API Key.");
             }
         });
@@ -242,7 +291,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
             });
 
         } catch (err) {
-            console.error("Error fetching Google Calendar events", err);
+            console.error("Google Calendar Fetch Error"); // Removed details
             setErrorMsg("Fallo al obtener eventos. Intente sincronizar nuevamente.");
             if ((err as any).status === 401) {
                 setIsAuthorized(false); // Token might be expired
@@ -366,7 +415,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
                     start,
                     end,
                     description: appointmentData.notes || appointmentData.type,
-                    colorClass: 'bg-primary/10 border-l-4 border-primary text-text-dark dark:text-white',
+                    colorClass: localStorage.getItem('lucha_event_default_color') || 'bg-primary/10 border-l-4 border-primary text-text-dark dark:text-white',
                     type: 'appointment',
                     email: appointmentData.email,
                 };
@@ -374,12 +423,12 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
                 // Add to events
                 setEvents(prev => [...prev, newEvent]);
             } else {
-                console.error('Error al guardar turno:', response.error);
-                alert('Error al guardar el turno');
+                setNetworkErrorMessage('Error al guardar el turno. Intente nuevamente.');
+                setShowNetworkError(true);
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert('Error de conexión al guardar el turno');
+            setNetworkErrorMessage('Error de conexión al guardar el turno.');
+            setShowNetworkError(true);
         }
     };
 
@@ -435,6 +484,11 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
 
     return (
         <div className="flex-1 overflow-y-auto no-scrollbar p-0 h-full relative">
+            <NetworkStatusModal
+                isOpen={showNetworkError}
+                onClose={() => setShowNetworkError(false)}
+                message={networkErrorMessage}
+            />
 
             {/* Configuration Modal */}
             {showConfigModal && (
@@ -455,39 +509,64 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-xs text-text-muted mb-1 block">Inicio</label>
-                                        <select className="w-full bg-background-light dark:bg-gray-800 border-none rounded-lg p-2 text-sm text-text-dark dark:text-white">
+                                        <select
+                                            value={configWorkingHours.start}
+                                            onChange={(e) => setConfigWorkingHours(prev => ({ ...prev, start: e.target.value }))}
+                                            className="w-full bg-background-light dark:bg-gray-800 border-none rounded-lg p-2 text-sm text-text-dark dark:text-white focus:ring-2 focus:ring-primary"
+                                        >
                                             {Array.from({ length: 18 }).map((_, i) => {
                                                 const h = i + 6;
-                                                return <option key={h}>{h < 10 ? `0${h}` : h}:00 {h >= 12 ? 'PM' : 'AM'}</option>
+                                                const timeStr = `${h < 10 ? '0' + h : h}:00`;
+                                                return <option key={h} value={timeStr}>{h < 10 ? `0${h}` : h}:00 {h >= 12 ? 'PM' : 'AM'}</option>
                                             })}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="text-xs text-text-muted mb-1 block">Fin</label>
-                                        <select className="w-full bg-background-light dark:bg-gray-800 border-none rounded-lg p-2 text-sm text-text-dark dark:text-white">
-                                            <option>08:00 PM</option>
-                                            <option>09:00 PM</option>
-                                            <option selected>10:00 PM</option>
-                                            <option>11:00 PM</option>
+                                        <select
+                                            value={configWorkingHours.end}
+                                            onChange={(e) => setConfigWorkingHours(prev => ({ ...prev, end: e.target.value }))}
+                                            className="w-full bg-background-light dark:bg-gray-800 border-none rounded-lg p-2 text-sm text-text-dark dark:text-white focus:ring-2 focus:ring-primary"
+                                        >
+                                            {Array.from({ length: 18 }).map((_, i) => {
+                                                const h = i + 6;
+                                                const timeStr = `${h < 10 ? '0' + h : h}:00`;
+                                                return <option key={h} value={timeStr}>{h < 10 ? `0${h}` : h}:00 {h >= 12 ? 'PM' : 'AM'}</option>
+                                            })}
                                         </select>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Colors Config (Mock) */}
+                            {/* Colors Config */}
                             <div className="space-y-3">
                                 <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                     <span className="material-symbols-outlined text-primary text-lg">palette</span>
-                                    Colores de Eventos
+                                    Color por Defecto
                                 </h4>
                                 <div className="flex gap-3">
-                                    {['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500'].map((color, i) => (
-                                        <div key={i} className={`w-8 h-8 rounded-full ${color} cursor-pointer hover:scale-110 transition-transform ring-offset-2 ring-1 ring-transparent hover:ring-gray-300 dark:ring-offset-gray-800`}></div>
-                                    ))}
+                                    {[
+                                        'bg-blue-100 border-blue-500 text-blue-900',
+                                        'bg-green-100 border-green-500 text-green-900',
+                                        'bg-purple-100 border-purple-500 text-purple-900',
+                                        'bg-orange-100 border-orange-500 text-orange-900',
+                                        'bg-pink-100 border-pink-500 text-pink-900'
+                                    ].map((colorClass, i) => {
+                                        // Extract background class for the circle display
+                                        const bgClass = colorClass.split(' ')[0].replace('100', '500');
+                                        return (
+                                            <button
+                                                key={i}
+                                                onClick={() => setConfigDefaultColor(colorClass)}
+                                                className={`w-8 h-8 rounded-full ${bgClass} cursor-pointer hover:scale-110 transition-transform ring-offset-2 hover:ring-gray-300 dark:ring-offset-gray-800
+                                                ${configDefaultColor === colorClass ? 'ring-2 ring-primary scale-110' : 'ring-1 ring-transparent'}`}
+                                            ></button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
-                            {/* Integrations (Mock) */}
+                            {/* Integrations */}
                             <div className="space-y-3">
                                 <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                     <span className="material-symbols-outlined text-primary text-lg">link</span>
@@ -500,11 +579,26 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold text-text-dark dark:text-white">Google Calendar</p>
-                                            <p className="text-xs text-green-600 font-medium">Conectado</p>
+                                            <p className={`text-xs font-medium ${isAuthorized ? 'text-green-600' : 'text-gray-400'}`}>
+                                                {isAuthorized ? 'Conectado' : 'Desconectado'}
+                                            </p>
                                         </div>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                                        <input
+                                            type="checkbox"
+                                            checked={isAuthorized}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    handleAuthClick();
+                                                } else {
+                                                    // Soft disconnect
+                                                    setIsAuthorized(false);
+                                                    setEvents(prev => prev.filter(ev => ev.type !== 'google'));
+                                                }
+                                            }}
+                                            className="sr-only peer"
+                                        />
                                         <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 dark:peer-focus:ring-primary/80 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
                                     </label>
                                 </div>
@@ -512,7 +606,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
                         </div>
                         <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-end">
                             <button
-                                onClick={() => setShowConfigModal(false)}
+                                onClick={handleSaveConfig}
                                 className="px-6 py-2 bg-text-dark text-white rounded-lg hover:bg-black transition-all font-bold text-sm shadow-lg shadow-black/20"
                             >
                                 Guardar
@@ -524,7 +618,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
 
             <div className="max-w-[1400px] mx-auto flex flex-col xl:flex-row gap-6 h-full">
                 {/* Left Column: Mini Calendar & Filters */}
-                <div className="w-full xl:w-80 flex-shrink-0 flex flex-col gap-6">
+                <div className="w-full xl:w-80 flex-shrink-0 flex flex-col gap-6 print:hidden">
 
                     {/* Error Message Toast */}
                     {errorMsg && (
@@ -644,7 +738,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
                 {/* Right Column: Main Calendar */}
                 <div className="flex-1 flex flex-col bg-surface-light dark:bg-surface-dark rounded-2xl border border-input-border dark:border-gray-700 shadow-sm overflow-hidden h-[800px]">
                     {/* Toolbar */}
-                    <div className="p-4 border-b border-input-border dark:border-gray-700 flex flex-wrap gap-4 items-center justify-between">
+                    <div className="p-4 border-b border-input-border dark:border-gray-700 flex flex-wrap gap-4 items-center justify-between print:hidden">
                         <div className="flex items-center gap-4">
                             <div className="flex bg-background-light dark:bg-background-dark rounded-lg p-1">
                                 <button
@@ -908,7 +1002,8 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
                                                 onClick={(e) => {
                                                     // Si el click no fue en un evento, abrir modal para este día
                                                     if ((e.target as HTMLElement).closest('.month-event-item') === null) {
-                                                        handleOpenAppointmentModal(d, '09:00');
+                                                        const config = JSON.parse(localStorage.getItem('lucha_working_hours') || '{"start":"08:00"}');
+                                                        handleOpenAppointmentModal(d, config.start || '08:00');
                                                     }
                                                 }}
                                             >
@@ -1054,7 +1149,7 @@ const Calendar: React.FC<CalendarProps> = ({ appointments = [], onDeleteEvent })
             {/* Floating Action Button */}
             <button
                 onClick={() => handleOpenAppointmentModal()}
-                className="fixed bottom-8 right-8 p-4 bg-primary text-text-dark rounded-full shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-110 transition-all duration-200 z-40 group"
+                className="fixed bottom-8 right-8 p-4 bg-primary text-text-dark rounded-full shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-110 transition-all duration-200 z-40 group print:hidden"
                 title="Agendar Nuevo Turno"
             >
                 <span className="material-symbols-outlined text-3xl">add</span>

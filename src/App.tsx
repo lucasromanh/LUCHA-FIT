@@ -13,6 +13,8 @@ import { CLIENTS } from './constants';
 import { appointmentsApi } from './services/api';
 import { luchafitEmail, generateWhatsAppLink, whatsappMessages } from './services/emailService';
 
+import NetworkStatusModal from './components/NetworkStatusModal';
+
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('luchafit_auth') === 'true';
@@ -21,6 +23,10 @@ const App: React.FC = () => {
     return localStorage.getItem('lucha_current_page') || 'home';
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Global Error State
+  const [showNetworkError, setShowNetworkError] = useState(false);
+  const [networkErrorMessage, setNetworkErrorMessage] = useState('');
 
   // Global Appointment State
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -34,7 +40,8 @@ const App: React.FC = () => {
           setAppointments(response.data);
         }
       } catch (error) {
-        console.error('Error fetching appointments:', error);
+        // Silently fail log or minimal
+        console.warn('Refresh needed');
       }
     };
 
@@ -127,13 +134,13 @@ const App: React.FC = () => {
         }
         return true;
       } else {
-        console.error('Error al confirmar turno:', response.error);
-        alert('Error al confirmar el turno');
+        setNetworkErrorMessage('Error al confirmar el turno. Intente nuevamente.');
+        setShowNetworkError(true);
         return false;
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error de conexión');
+      setNetworkErrorMessage('Error de conexión al confirmar.');
+      setShowNetworkError(true);
       return false;
     }
   };
@@ -165,11 +172,12 @@ const App: React.FC = () => {
         setAppointments(prev => prev.filter(apt => apt.id !== id));
         return true;
       } else {
-        console.error('Error al rechazar turno:', response.error);
+        setNetworkErrorMessage('Error al rechazar turno.');
+        // setShowNetworkError(true); // Opcional, quizás no bloquear por rechazo fallido visualmente si ya se borró local
         return false;
       }
     } catch (error) {
-      console.error('Error:', error);
+      // Clean error
       return false;
     }
   };
@@ -212,7 +220,6 @@ const App: React.FC = () => {
       setCurrentPage('reports');
     } else {
       // If client doesn't exist, go to Reports List
-      console.warn("Client not provided, redirecting to Reports List");
       setSelectedClientForReports(null);
       setReportViewMode('list');
       setCurrentPage('reports');
@@ -246,7 +253,12 @@ const App: React.FC = () => {
 
   // Protected App Layout
   return (
-    <div className="flex h-[100dvh] w-full bg-background-light dark:bg-background-dark text-text-dark dark:text-gray-100 overflow-hidden font-display">
+    <div className="flex h-[100dvh] w-full bg-background-light dark:bg-background-dark text-text-dark dark:text-gray-100 overflow-hidden font-display print:h-auto print:overflow-visible">
+      <NetworkStatusModal
+        isOpen={showNetworkError}
+        onClose={() => setShowNetworkError(false)}
+        message={networkErrorMessage}
+      />
       {/* Sidebar - Desktop */}
       <Sidebar
         currentPage={currentPage}
@@ -255,7 +267,7 @@ const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative print:overflow-visible print:h-auto">
         {/* Mobile Header */}
         <div className="lg:hidden flex items-center justify-between p-4 pt-[calc(1rem+env(safe-area-inset-top))] bg-surface-light dark:bg-surface-dark border-b border-input-border dark:border-gray-800 z-50 sticky top-0 shrink-0">
           <div className="flex items-center gap-2">
@@ -295,7 +307,7 @@ const App: React.FC = () => {
         )}
 
         {/* Content Scrollable Area */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background-light dark:bg-background-dark p-4 md:p-8 lg:p-10">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background-light dark:bg-background-dark p-4 md:p-8 lg:p-10 print:overflow-visible print:h-auto">
           {currentPage === 'dashboard' && (
             <Dashboard
               onNavigate={navigateTo}

@@ -28,7 +28,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, onLogout }) 
   // Profile data is static constant to ensure stability.
 
   return (
-    <aside className="hidden lg:flex w-64 flex-col h-full bg-surface-light dark:bg-surface-dark border-r border-input-border dark:border-gray-800 flex-shrink-0">
+    <aside className="hidden lg:flex w-64 flex-col h-full bg-surface-light dark:bg-surface-dark border-r border-input-border dark:border-gray-800 flex-shrink-0 print:hidden">
       {/* Brand */}
       <div className="p-6 border-b border-input-border dark:border-gray-800">
         <div className="flex items-center gap-3">

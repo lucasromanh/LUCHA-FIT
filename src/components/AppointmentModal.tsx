@@ -46,9 +46,21 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
     'Otro',
   ];
 
+  const [config, setConfig] = useState({ start: '08:00', end: '20:00', days: [1, 2, 3, 4, 5] });
+
   // Inicializar fecha y hora si se proporcionan
   useEffect(() => {
     if (isOpen) {
+      // Load config
+      const savedConfig = localStorage.getItem('lucha_working_hours');
+      if (savedConfig) {
+        try {
+          setConfig(JSON.parse(savedConfig));
+        } catch (e) {
+          console.error("Error parsing working hours config");
+        }
+      }
+
       if (initialDate) {
         const year = initialDate.getFullYear();
         const month = String(initialDate.getMonth() + 1).padStart(2, '0');
@@ -126,8 +138,6 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
     // --- BUSINESS HOURS VALIDATION ---
     if (formData.date && formData.startTime && formData.endTime) {
-      const config = JSON.parse(localStorage.getItem('lucha_working_hours') || '{"days":[1,2,3,4,5],"start":"08:00","end":"20:00"}');
-
       // 1. Check Day
       // Create date object (append T00:00:00 to avoid UTC shifts if using simple date string)
       const dateObj = new Date(formData.date + 'T00:00:00');
@@ -281,6 +291,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 name="startTime"
                 value={formData.startTime}
                 onChange={handleChange}
+                min={config.start}
+                max={config.end}
                 className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${errors.startTime ? 'border-red-500' : 'border-input-border dark:border-gray-700'
                   } rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
               />
@@ -303,6 +315,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 name="endTime"
                 value={formData.endTime}
                 onChange={handleChange}
+                min={config.start}
+                max={config.end}
                 className={`w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border ${errors.endTime ? 'border-red-500' : 'border-input-border dark:border-gray-700'
                   } rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all`}
               />

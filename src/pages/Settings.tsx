@@ -69,9 +69,8 @@ const Settings: React.FC = () => {
                 const storedToken = localStorage.getItem('luchafit_jwt'); // Trying common name or verify with user.
 
                 // Actually, let's just try to fetch.
-                // Fetch from consolidated auth.php which returns full profile
-                const res = await fetch('http://localhost:8000/api/auth.php', { headers: { 'Authorization': `Bearer ${storedToken || ''}` } });
-                const res2 = !res.ok ? await fetch('/api/auth.php', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` } }) : res;
+                // Fetch from auth endpoint
+                const res = await fetch('/api/auth.php', { headers: { 'Authorization': `Bearer ${storedToken || ''}` } });
 
                 if (res.ok) {
                     const responseData = await res.json();
@@ -93,8 +92,11 @@ const Settings: React.FC = () => {
         fetchProfile();
     }, []);
 
+    const [saveError, setSaveError] = useState<string | null>(null);
+
     const handleSaveProfile = async () => {
         setIsProfileSaving(true);
+        setSaveError(null);
         try {
             const formData = new FormData();
             formData.append('name', profileData.name);
@@ -126,11 +128,11 @@ const Settings: React.FC = () => {
                 setShowSaveSuccess(true);
                 setTimeout(() => setShowSaveSuccess(false), 3000);
             } else {
-                alert("Error: " + data.message);
+                setSaveError(data.message || "Error al actualizar perfil");
             }
         } catch (e) {
             console.error(e);
-            alert("Error de conexión al guardar el perfil.");
+            setSaveError("Error de conexión al guardar el perfil.");
         } finally {
             setIsProfileSaving(false);
         }
@@ -258,6 +260,9 @@ const Settings: React.FC = () => {
                             </>
                         )}
                     </button>
+                    {saveError && (
+                        <p className="mt-2 text-xs text-red-500 font-bold">{saveError}</p>
+                    )}
                 </div>
             </section>
 
