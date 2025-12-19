@@ -534,27 +534,50 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
     const exportToPDF = async (data: ExportData) => {
         setIsGeneratingPDF(true);
         try {
-            // Crear contenedor oculto para renderizar el componente
+            // Crear contenedor para renderizar el componente
+            // FIX CRITICO: El body tiene overflow-hidden para la app móvil.
+            // Para que html2canvas capture todo, debemos desbloquear el scroll momentáneamente.
+
+            // 1. Guardar estilos actuales
+            const originalBodyOverflow = document.body.style.overflow;
+            const originalBodyHeight = document.body.style.height;
+            const originalHtmlOverflow = document.documentElement.style.overflow;
+
+            // 2. Desbloquear el DOM completo
+            document.body.style.overflow = 'visible';
+            document.body.style.height = 'auto';
+            document.documentElement.style.overflow = 'visible';
+
+            // 3. Contenedor Absolute encima de todo
             const container = document.createElement('div');
             container.style.position = 'absolute';
-            container.style.left = '-9999px';
             container.style.top = '0';
-            container.style.width = '210mm';
+            container.style.left = '0';
+            container.style.width = '210mm'; // Ancho A4
+            container.style.zIndex = '-9999'; // FIX: Detrás del loader (que suele ser alto pero visible)
+            // IMPORTANTE: Un z-index negativo lo oculta visualmente al usuario si hay fondo,
+            // pero sigue renderizado en el DOM para html2canvas si el body está unlocked.
+            container.style.backgroundColor = '#ffffff';
             document.body.appendChild(container);
+
+            // Scroll al inicio: REMOVIDO para evitar saltos bruscos visuales "glitchy"
+            // window.scrollTo(0, 0);
 
             // Renderizar el componente PrintableReport
             const root = createRoot(container);
             root.render(
-                <PrintableReport
-                    client={data.client}
-                    currentRecord={data.currentRecord}
-                    prevRecord={data.prevRecord}
-                    calculations={data}
-                />
+                <div style={{ width: '210mm', backgroundColor: 'white', minHeight: '100vh' }}>
+                    <PrintableReport
+                        client={data.client}
+                        currentRecord={data.currentRecord}
+                        prevRecord={data.prevRecord}
+                        calculations={data}
+                    />
+                </div>
             );
 
             // Esperar a que el componente se renderice completamente
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 3000));
 
             // Crear PDF
             const pdf = new jsPDF('p', 'mm', 'a4');
@@ -569,12 +592,13 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
 
                 // Capturar cada página individual
                 const canvas = await html2canvas(page, {
-                    scale: 2,
+                    scale: 2, // Mantener calidad
                     backgroundColor: '#ffffff',
                     logging: false,
                     useCORS: true,
-                    width: page.offsetWidth,
-                    height: page.offsetHeight
+                    allowTaint: true, // Permitir imágenes externas si las hay
+                    scrollY: 0,
+                    windowWidth: 1200 // Simular desktop para layouts responsive
                 });
 
                 const imgData = canvas.toDataURL('image/png');
@@ -594,6 +618,12 @@ const Reports: React.FC<ReportsProps> = ({ externalClient, externalViewMode }) =
             // Limpiar
             root.unmount();
             document.body.removeChild(container);
+
+            // 4. Restaurar estilos
+            document.body.style.overflow = originalBodyOverflow;
+            document.body.style.height = originalBodyHeight;
+            document.documentElement.style.overflow = originalHtmlOverflow;
+
         } catch (error) {
             console.error('Error generando PDF:', error);
             alert('Error al generar el PDF. Por favor intente nuevamente.');

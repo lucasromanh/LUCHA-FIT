@@ -123,27 +123,29 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
 
   const d = currentRecord.data;
 
-  // Prepare data for charts
+  // Prepare data for charts with SAFEGUARDS
   const girthsData = [
-    { name: 'Brazo', value: d.girths.arm_relaxed, corrected: calculations.armCorr },
-    { name: 'Muslo', value: d.girths.mid_thigh, corrected: calculations.thighCorr },
-    { name: 'Pierna', value: d.girths.calf_girth, corrected: calculations.calfCorr }
+    { name: 'Brazo', value: d.girths?.arm_relaxed || 0, corrected: calculations.armCorr || 0 },
+    { name: 'Muslo', value: d.girths?.mid_thigh || 0, corrected: calculations.thighCorr || 0 },
+    { name: 'Pierna', value: d.girths?.calf_girth || 0, corrected: calculations.calfCorr || 0 }
   ];
 
+  // FIX: Use optional chaining and default values. 
+  // FIX: Use 'thigh' and 'calf' keys to match Reports.tsx data structure (instead of front_thigh/medial_calf)
   const skinfoldsProfileData = [
-    { name: 'Tríceps', value: d.skinfolds.triceps },
-    { name: 'Subesc.', value: d.skinfolds.subscapular },
-    { name: 'Bíceps', value: d.skinfolds.biceps },
-    { name: 'C.Ilíaca', value: d.skinfolds.iliac_crest },
-    { name: 'Suprasp.', value: d.skinfolds.supraspinale },
-    { name: 'Abdominal', value: d.skinfolds.abdominal },
-    { name: 'Muslo', value: d.skinfolds.front_thigh },
-    { name: 'Pierna', value: d.skinfolds.medial_calf }
+    { name: 'Tríceps', value: d.skinfolds?.triceps || 0 },
+    { name: 'Subesc.', value: d.skinfolds?.subscapular || 0 },
+    { name: 'Bíceps', value: d.skinfolds?.biceps || 0 },
+    { name: 'C.Ilíaca', value: d.skinfolds?.iliac_crest || 0 },
+    { name: 'Suprasp.', value: d.skinfolds?.supraspinale || 0 },
+    { name: 'Abdominal', value: d.skinfolds?.abdominal || 0 },
+    { name: 'Muslo', value: d.skinfolds?.thigh || 0 },
+    { name: 'Pierna', value: d.skinfolds?.calf || 0 }
   ];
 
   // Somatotype interpretation
   const getSomatotypeCategory = () => {
-    const { endo, meso, ecto } = calculations.somato;
+    const { endo, meso, ecto } = calculations.somato || { endo: 0, meso: 0, ecto: 0 }; // Safeguard
     if (endo > meso && endo > ecto) return 'Endomorfo';
     if (meso > endo && meso > ecto) return 'Mesomorfo';
     if (ecto > endo && ecto > meso) return 'Ectomorfo';
@@ -574,8 +576,8 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
                 <YAxis style={{ fontSize: '9pt' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '9pt' }} />
-                <Bar dataKey="value" fill="#3b82f6" name="Total" />
-                <Bar dataKey="corrected" fill="#10b981" name="Corregido" />
+                <Bar dataKey="value" fill="#3b82f6" name="Total" isAnimationActive={false} />
+                <Bar dataKey="corrected" fill="#10b981" name="Corregido" isAnimationActive={false} />
               </BarChart>
             </div>
           </div>
@@ -651,7 +653,7 @@ export const PrintableReport: React.FC<PrintableReportProps> = ({ client, curren
             <XAxis dataKey="name" style={{ fontSize: '9pt' }} />
             <YAxis style={{ fontSize: '9pt' }} label={{ value: 'mm', angle: -90, position: 'insideLeft' }} />
             <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+            <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} isAnimationActive={false} />
           </LineChart>
         </div>
 

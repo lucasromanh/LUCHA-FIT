@@ -253,7 +253,7 @@ const App: React.FC = () => {
 
   // Protected App Layout
   return (
-    <div className="flex h-[100dvh] w-full bg-background-light dark:bg-background-dark text-text-dark dark:text-gray-100 overflow-hidden font-display print:h-auto print:overflow-visible">
+    <div className="flex h-[100dvh] w-full bg-background-light dark:bg-background-dark text-text-dark dark:text-gray-100 overflow-hidden font-display print:h-auto print:overflow-visible overscroll-none fixed inset-0">
       <NetworkStatusModal
         isOpen={showNetworkError}
         onClose={() => setShowNetworkError(false)}
